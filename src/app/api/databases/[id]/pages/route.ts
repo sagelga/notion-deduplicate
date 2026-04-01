@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getDatabaseSchema, notionHeaders, getPropertyValue, paginateDatabase } from "@/lib/notion";
+import { getDatabaseSchema, getPropertyValue, paginateDatabase } from "@/lib/notion";
 
 export const runtime = 'edge';
 
@@ -24,18 +24,17 @@ export async function GET(
     const propertyTypeMap = new Map(schema.map((p) => [p.name, p.type]));
 
     // Paginate through all pages
-    const pages: any[] = [];
+    const pages: { id: string; created_time: string; title: string; properties: Record<string, string | null> }[] = [];
     for await (const batch of paginateDatabase(databaseId, notionToken)) {
       for (const page of batch) {
         // Extract title from the page
         let title = "";
         const titleProperty = Object.entries(page.properties || {}).find(
-          ([, prop]: [string, any]) => prop.type === "title"
+          ([, prop]) => prop.type === "title"
         );
 
         if (titleProperty) {
-          const titleValue = titleProperty[1] as any;
-          title = titleValue.title?.[0]?.plain_text ?? "(Untitled)";
+          title = titleProperty[1].title?.[0]?.plain_text ?? "(Untitled)";
         }
 
         // Extract property values with type information

@@ -2,6 +2,23 @@
  * Shared Notion API helpers
  */
 
+type NotionRichText = { plain_text: string }[];
+type NotionSelect = { name: string } | null;
+type NotionDate = { start: string } | null;
+
+interface NotionPropertyValue {
+  title?: NotionRichText;
+  rich_text?: NotionRichText;
+  select?: NotionSelect;
+  number?: number | null;
+  email?: string | null;
+  url?: string | null;
+  phone_number?: string | null;
+  checkbox?: boolean;
+  date?: NotionDate;
+  type?: string;
+}
+
 export interface NotionProperty {
   id: string;
   name: string;
@@ -15,6 +32,17 @@ export interface NotionPage {
   properties: Record<string, string | null>;
 }
 
+export interface RawNotionPage {
+  id: string;
+  created_time: string;
+  properties: Record<string, NotionPropertyValue>;
+}
+
+export interface NotionDatabase {
+  id: string;
+  title: Array<{ plain_text: string }>;
+}
+
 export function notionHeaders(token: string): HeadersInit {
   return {
     Authorization: `Bearer ${token}`,
@@ -24,7 +52,7 @@ export function notionHeaders(token: string): HeadersInit {
 }
 
 export function getPropertyValue(
-  prop: any,
+  prop: NotionPropertyValue,
   propType: string
 ): string | null {
   if (!prop) return null;
@@ -38,7 +66,7 @@ export function getPropertyValue(
       case "select":
         return prop.select?.name ?? null;
       case "number":
-        return prop.number !== null ? String(prop.number) : null;
+        return prop.number !== null && prop.number !== undefined ? String(prop.number) : null;
       case "email":
         return prop.email ?? null;
       case "url":
@@ -60,7 +88,7 @@ export function getPropertyValue(
 export async function* paginateDatabase(
   databaseId: string,
   token: string
-): AsyncGenerator<NotionPage[]> {
+): AsyncGenerator<RawNotionPage[]> {
   const headers = notionHeaders(token);
   let startCursor: string | undefined;
 
@@ -84,7 +112,7 @@ export async function* paginateDatabase(
     }
 
     const data = await response.json();
-    const pages: NotionPage[] = data.results || [];
+    const pages: RawNotionPage[] = data.results || [];
 
     if (pages.length > 0) {
       yield pages;
@@ -116,7 +144,7 @@ export async function getDatabaseSchema(
   const properties: NotionProperty[] = [];
 
   for (const [name, prop] of Object.entries(data.properties || {})) {
-    const propObj = prop as any;
+    const propObj = prop as { id: string; type: string };
     properties.push({
       id: propObj.id,
       name,
@@ -127,7 +155,7 @@ export async function getDatabaseSchema(
   return properties;
 }
 
-export async function listDatabases(token: string): Promise<any[]> {
+export async function listDatabases(token: string): Promise<NotionDatabase[]> {
   const headers = notionHeaders(token);
   const response = await fetch("https://api.notion.com/v1/search", {
     method: "POST",

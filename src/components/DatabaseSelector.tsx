@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { getDatabaseSchema, NotionProperty } from "@/lib/notion";
+import { getDatabaseSchema, NotionProperty, type NotionDatabase } from "@/lib/notion";
 import DeduplicateView from "./DeduplicateView";
-
-interface Database {
-  id: string;
-  title: Array<{ plain_text: string }>;
-}
 
 interface Page {
   id: string;
@@ -32,7 +27,7 @@ export default function DatabaseSelector({
   databases,
   notionToken,
 }: {
-  databases: Database[];
+  databases: NotionDatabase[];
   notionToken: string;
 }) {
   const [selectedDatabaseId, setSelectedDatabaseId] = useState<string>("");
