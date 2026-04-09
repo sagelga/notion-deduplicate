@@ -11,23 +11,27 @@ export async function GET(request: Request) {
     return new Response("No authorization code provided", { status: 400 });
   }
 
-  const clientId = process.env.NOTION_CLIENT_ID;
-  const clientSecret = process.env.NOTION_CLIENT_SECRET;
-  const redirectUri = process.env.NOTION_REDIRECT_URI;
+  const cookieStore = await cookies();
 
-  if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error(
-      "NOTION_CLIENT_ID, NOTION_CLIENT_SECRET, and NOTION_REDIRECT_URI environment variables must be set"
-    );
+  const clientId =
+    cookieStore.get("notion_client_id")?.value ?? process.env.NOTION_CLIENT_ID;
+  const clientSecret =
+    cookieStore.get("notion_client_secret")?.value ?? process.env.NOTION_CLIENT_SECRET;
+  const redirectUri =
+    process.env.NOTION_REDIRECT_URI ?? `${url.origin}/api/auth/callback`;
+
+  if (!clientId || !clientSecret) {
+    redirect("/?error=missing_credentials");
   }
 
+  let accessToken: string;
+
   try {
-    // Exchange code for access token
     const response = await fetch("https://api.notion.com/v1/oauth/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+        Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
       },
       body: JSON.stringify({
         grant_type: "authorization_code",
@@ -39,31 +43,29 @@ export async function GET(request: Request) {
     if (!response.ok) {
       const error = await response.text();
       console.error("Notion OAuth error:", error);
-      return new Response("Failed to authenticate with Notion", {
+      return new Response(`Failed to authenticate with Notion: ${error}`, {
         status: 400,
       });
     }
 
     const data = await response.json();
-    const accessToken = data.access_token;
+    accessToken = data.access_token;
 
     if (!accessToken) {
       return new Response("No access token in response", { status: 400 });
     }
-
-    // Set httpOnly cookie
-    const cookieStore = await cookies();
-    cookieStore.set("notion_token", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 86400, // 24 hours
-      path: "/",
-    });
-
-    redirect("/dashboard");
   } catch (error) {
     console.error("Auth callback error:", error);
     return new Response("Authentication failed", { status: 500 });
   }
+
+  cookieStore.set("notion_token", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 86400,
+    path: "/",
+  });
+
+  redirect("/dashboard");
 }

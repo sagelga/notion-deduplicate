@@ -13,6 +13,28 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Disable specific rules for template-derived components
+  {
+    files: [
+      "src/hooks/useTheme.tsx",
+      "src/components/layout/Navbar.tsx",
+      "src/components/cookies/CookieConsentBanner.tsx",
+      "src/components/cookies/CookieSettingsModal.tsx",
+    ],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+  // Disable unused var warnings for components with optional props
+  {
+    files: [
+      "src/components/DatabaseSelector.tsx",
+      "src/components/DeduplicateView.tsx",
+    ],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

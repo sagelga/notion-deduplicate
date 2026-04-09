@@ -1,16 +1,21 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 export const runtime = 'edge';
 
-export async function GET() {
-  const clientId = process.env.NOTION_CLIENT_ID;
-  const redirectUri = process.env.NOTION_REDIRECT_URI;
+export async function GET(request: Request) {
+  const cookieStore = await cookies();
 
-  if (!clientId || !redirectUri) {
-    throw new Error(
-      "NOTION_CLIENT_ID and NOTION_REDIRECT_URI environment variables must be set"
-    );
+  const clientId =
+    cookieStore.get("notion_client_id")?.value ?? process.env.NOTION_CLIENT_ID;
+
+  if (!clientId) {
+    redirect("/?error=missing_credentials");
   }
+
+  const origin = new URL(request.url).origin;
+  const redirectUri =
+    process.env.NOTION_REDIRECT_URI ?? `${origin}/api/auth/callback`;
 
   const params = new URLSearchParams({
     client_id: clientId,

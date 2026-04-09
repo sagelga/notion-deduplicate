@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { deletePage } from "@/lib/notion";
+import { archivePage, deletePage } from "@/lib/notion";
 
 export const runtime = 'edge';
 
@@ -15,59 +15,50 @@ export async function POST(request: Request) {
       });
     }
 
-    const { pageIds } = await request.json() as { pageIds: string[] };
+    const body = await request.json() as { pageIds: string[]; mode?: "archive" | "delete" };
+    const { pageIds, mode = "archive" } = body;
 
     if (!Array.isArray(pageIds) || pageIds.length === 0) {
       return new Response(
         JSON.stringify({ error: "Invalid pageIds array" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
     const details: Array<{ id: string; ok: boolean; error?: string }> = [];
-    let deleted = 0;
+    let actioned = 0;
     let errors = 0;
 
-    // Delete pages sequentially
     for (const pageId of pageIds) {
       try {
-        await deletePage(pageId, notionToken);
+        if (mode === "archive") {
+          await archivePage(pageId, notionToken);
+        } else {
+          await deletePage(pageId, notionToken);
+        }
         details.push({ id: pageId, ok: true });
-        deleted++;
+        actioned++;
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
-        details.push({ id: pageId, ok: false, error: errorMessage });
+        details.push({
+          id: pageId,
+          ok: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
         errors++;
       }
     }
 
     return new Response(
-      JSON.stringify({
-        deleted,
-        errors,
-        details,
-      }),
-      {
-        headers: { "Content-Type": "application/json" },
-      }
+      JSON.stringify({ actioned, errors, mode, details }),
+      { headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error deduplicating pages:", error);
     return new Response(
       JSON.stringify({
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to deduplicate pages",
+        error: error instanceof Error ? error.message : "Failed to deduplicate pages",
       }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

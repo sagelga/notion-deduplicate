@@ -4,71 +4,83 @@ import { getDatabaseSchema, getPropertyValue, paginateDatabase } from "@/lib/not
 export const runtime = 'edge';
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id: databaseId } = await params;
-    const cookieStore = await cookies();
-    const notionToken = cookieStore.get("notion_token")?.value;
+  const { id: databaseId } = await params;
+  const cookieStore = await cookies();
+  const notionToken = cookieStore.get("notion_token")?.value;
 
-    if (!notionToken) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Get database schema to map property types
-    const schema = await getDatabaseSchema(databaseId, notionToken);
-    const propertyTypeMap = new Map(schema.map((p) => [p.name, p.type]));
-
-    // Paginate through all pages
-    const pages: { id: string; created_time: string; title: string; properties: Record<string, string | null> }[] = [];
-    for await (const batch of paginateDatabase(databaseId, notionToken)) {
-      for (const page of batch) {
-        // Extract title from the page
-        let title = "";
-        const titleProperty = Object.entries(page.properties || {}).find(
-          ([, prop]) => prop.type === "title"
-        );
-
-        if (titleProperty) {
-          title = titleProperty[1].title?.[0]?.plain_text ?? "(Untitled)";
-        }
-
-        // Extract property values with type information
-        const properties: Record<string, string | null> = {};
-        for (const [propName, propValue] of Object.entries(
-          page.properties || {}
-        )) {
-          const propType = propertyTypeMap.get(propName) || "unknown";
-          const value = getPropertyValue(propValue, propType);
-          properties[propName] = value;
-        }
-
-        pages.push({
-          id: page.id,
-          created_time: page.created_time,
-          title,
-          properties,
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ pages }), {
+  if (!notionToken) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error fetching pages:", error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Failed to fetch pages",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
   }
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (msg: object) =>
+        controller.enqueue(encoder.encode(JSON.stringify(msg) + "\n"));
+
+      try {
+        const schema = await getDatabaseSchema(databaseId, notionToken);
+        const propertyTypeMap = Object.fromEntries(
+          schema.map((p) => [p.name, p.type])
+        );
+
+        send({ type: "schema", propertyTypeMap });
+
+        let total = 0;
+
+        for await (const batch of paginateDatabase(databaseId, notionToken)) {
+          const pages = batch.map((page) => {
+            let title = "(Untitled)";
+            const titleEntry = Object.entries(page.properties || {}).find(
+              ([, prop]) => prop.type === "title"
+            );
+            if (titleEntry) {
+              title = titleEntry[1].title?.[0]?.plain_text ?? "(Untitled)";
+            }
+
+            const properties: Record<string, string | null> = {};
+            for (const [propName, propValue] of Object.entries(
+              page.properties || {}
+            )) {
+              properties[propName] = getPropertyValue(
+                propValue,
+                propertyTypeMap[propName] ?? "unknown"
+              );
+            }
+
+            return {
+              id: page.id,
+              created_time: page.created_time,
+              title,
+              properties,
+            };
+          });
+
+          total += pages.length;
+          send({ type: "batch", pages });
+        }
+
+        send({ type: "done", total });
+      } catch (error) {
+        send({
+          type: "error",
+          message:
+            error instanceof Error ? error.message : "Failed to fetch pages",
+        });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: { "Content-Type": "application/x-ndjson" },
+  });
 }

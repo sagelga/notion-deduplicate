@@ -1,0 +1,304 @@
+.dedup-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Summary */
+.dedup-summary {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-rim);
+  flex-wrap: wrap;
+}
+
+.dedup-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.dedup-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.dedup-stat-label {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dedup-loading-note {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* Groups */
+.dedup-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dedup-group {
+  border: 1px solid var(--color-rim);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.dedup-group-header {
+  padding: 0.75rem 1rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-rim);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dedup-group-value {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.dedup-group-count {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+/* Table */
+.dedup-table-scroll {
+  overflow-x: auto;
+}
+
+.dedup-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.dedup-table th {
+  padding: 0.5rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-rim);
+}
+
+.dedup-table td {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--color-rim);
+  color: var(--color-text);
+}
+
+.dedup-table tr:last-child td {
+  border-bottom: none;
+}
+
+.dedup-table tr:hover td {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="dark"] .dedup-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dedup-table td.mono {
+  font-family: monospace;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.dedup-row-keep td {
+  background: rgba(35, 131, 226, 0.04);
+}
+
+.dedup-row-delete td {
+  background: rgba(235, 87, 87, 0.04);
+  opacity: 0.75;
+}
+
+/* Action cell with radio and checkbox */
+.dedup-action-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.dedup-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  margin: 0;
+}
+
+.dedup-radio-label input[type="radio"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.dedup-checkbox {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+.badge-keep {
+  color: #2383e2;
+  background: rgba(35, 131, 226, 0.1);
+}
+
+.badge-delete {
+  color: #eb5757;
+  background: rgba(235, 87, 87, 0.1);
+}
+
+/* Actions section */
+.dedup-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-rim);
+}
+
+.dedup-mode-toggle {
+  display: flex;
+  gap: 1.5rem;
+  flex: 1;
+}
+
+.dedup-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.dedup-mode-option input[type="radio"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.dedup-mode-hint {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+/* Action button */
+.dedup-action-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-family: inherit;
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+
+.dedup-action-btn:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.dedup-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dedup-action-btn--danger {
+  background: #eb5757;
+  color: #ffffff;
+}
+
+.dedup-action-btn--danger:hover:not(:disabled) {
+  background: #d44f4f;
+}
+
+/* Result state */
+.dedup-result {
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.dedup-result-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 1rem;
+}
+
+.dedup-result-stats {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.dedup-result-stat {
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.val-success {
+  color: #2383e2;
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.val-error {
+  color: #eb5757;
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.dedup-result-back {
+  display: inline-block;
+  color: var(--color-accent);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: none;
+  transition: color 0.1s;
+}
+
+.dedup-result-back:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+}

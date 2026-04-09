@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import "./DeduplicateView.css";
 
 interface Page {
   id: string;
@@ -14,212 +15,244 @@ interface DuplicateGroup {
   pages: Page[];
 }
 
+type Mode = "archive" | "delete";
+
 export default function DeduplicateView({
   pages,
   fieldName,
+  isLoading = false,
+  skipEmpty = false,
 }: {
   pages: Page[];
   fieldName: string;
+  isLoading?: boolean;
+  skipEmpty?: boolean;
 }) {
-  const [deleting, setDeleting] = useState(false);
-  const [result, setResult] = useState<{
-    deleted: number;
-    errors: number;
-  } | null>(null);
+  const [keepSelections, setKeepSelections] = useState<Map<string, string>>(new Map());
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+  const [mode, setMode] = useState<Mode>("archive");
+  const [acting, setActing] = useState(false);
+  const [result, setResult] = useState<{ actioned: number; errors: number; mode: Mode } | null>(null);
+
+  useEffect(() => {
+    if (!acting) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [acting]);
 
   // Group pages by field value
   const groups = new Map<string, Page[]>();
-
   for (const page of pages) {
     const value = page.properties[fieldName] ?? "(empty)";
-    if (!groups.has(value)) {
-      groups.set(value, []);
-    }
+    if (skipEmpty && (value === "(empty)" || value === null)) continue;
+    if (!groups.has(value)) groups.set(value, []);
     groups.get(value)!.push(page);
   }
 
-  // Filter to only duplicates
+  // Filter to duplicates, sort each group oldest-first
   const duplicateGroups: DuplicateGroup[] = Array.from(groups.entries())
-    .filter(([, groupPages]) => groupPages.length > 1)
-    .map(([value, groupPages]) => {
-      // Sort by created_time descending (newest first)
-      const sorted = [...groupPages].sort(
-        (a, b) =>
-          new Date(b.created_time).getTime() -
-          new Date(a.created_time).getTime()
-      );
-      return { value, pages: sorted };
-    })
+    .filter(([, g]) => g.length > 1)
+    .map(([value, g]) => ({
+      value,
+      pages: [...g].sort(
+        (a, b) => new Date(a.created_time).getTime() - new Date(b.created_time).getTime()
+      ),
+    }))
     .sort((a, b) => b.pages.length - a.pages.length);
 
-  const pagesToDelete = duplicateGroups.reduce(
-    (count, group) => count + (group.pages.length - 1),
-    0
-  );
+  // Effective keep ID per group (user selection or default: oldest)
+  const effectiveKeepId = (group: DuplicateGroup) =>
+    keepSelections.get(group.value) ?? group.pages[0].id;
 
-  const handleDeleteDuplicates = async () => {
-    const pageIdsToDelete: string[] = [];
+  // Pages that will actually be acted on
+  const pageIdsToAction = duplicateGroups.flatMap((group) => {
+    const keepId = effectiveKeepId(group);
+    return group.pages
+      .filter((p) => p.id !== keepId && !excludedIds.has(p.id))
+      .map((p) => p.id);
+  });
 
-    for (const group of duplicateGroups) {
-      // Keep the first (newest) page, delete the rest
-      for (let i = 1; i < group.pages.length; i++) {
-        pageIdsToDelete.push(group.pages[i].id);
+  const handleKeepChange = (group: DuplicateGroup, pageId: string) => {
+    setKeepSelections((prev) => new Map(prev).set(group.value, pageId));
+    // Reset checkbox state for the whole group so newly-demoted pages start checked
+    setExcludedIds((prev) => {
+      const next = new Set(prev);
+      group.pages.forEach((p) => next.delete(p.id));
+      return next;
+    });
+  };
+
+  const handleExcludeToggle = (pageId: string, excluded: boolean) => {
+    setExcludedIds((prev) => {
+      const next = new Set(prev);
+      if (excluded) {
+        next.add(pageId);
+      } else {
+        next.delete(pageId);
       }
-    }
+      return next;
+    });
+  };
 
-    setDeleting(true);
+  const handleAction = async () => {
+    setActing(true);
     try {
-      const response = await fetch("/api/deduplicate", {
+      const res = await fetch("/api/deduplicate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageIds: pageIdsToDelete }),
+        body: JSON.stringify({ pageIds: pageIdsToAction, mode }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete duplicates");
-      }
-
-      const data = await response.json();
-      setResult({ deleted: data.deleted, errors: data.errors });
-    } catch (error) {
-      console.error("Delete error:", error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to delete duplicates"
-      );
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json();
+      setResult({ actioned: data.actioned, errors: data.errors, mode });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setDeleting(false);
+      setActing(false);
     }
   };
 
   if (result) {
+    const verb = result.mode === "archive" ? "archived" : "deleted";
     return (
-      <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-        <h3 className="text-lg font-bold text-white mb-4">Deletion Complete</h3>
-        <div className="space-y-2 text-gray-300 mb-6">
-          <p>
-            <span className="font-semibold text-green-400">
-              {result.deleted}
-            </span>{" "}
-            pages deleted
+      <div className="dedup-result">
+        <h3 className="dedup-result-title">Done</h3>
+        <div className="dedup-result-stats">
+          <p className="dedup-result-stat">
+            <span className="val-success">{result.actioned}</span> pages {verb}
           </p>
           {result.errors > 0 && (
-            <p>
-              <span className="font-semibold text-red-400">{result.errors}</span>{" "}
-              errors
+            <p className="dedup-result-stat">
+              <span className="val-error">{result.errors}</span> errors
             </p>
           )}
         </div>
-        <a
-          href="/dashboard"
-          className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
-        >
-          Back to Dashboard
-        </a>
+        <a href="/dashboard" className="dedup-result-back">Back to Dashboard</a>
       </div>
     );
   }
 
+  const actionLabel = acting
+    ? mode === "archive" ? "Archiving…" : "Deleting…"
+    : mode === "archive"
+    ? `Archive ${pageIdsToAction.length} duplicates`
+    : `Delete ${pageIdsToAction.length} duplicates`;
+
   return (
-    <div className="space-y-6">
-      {/* Summary Bar */}
-      <div className="bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-lg p-6">
-        <div className="space-y-2">
-          <p className="text-gray-400">
-            <span className="font-bold text-white text-lg">
-              {duplicateGroups.length}
-            </span>{" "}
-            duplicate groups found
-          </p>
-          <p className="text-gray-400">
-            <span className="font-bold text-white text-lg">
-              {pagesToDelete}
-            </span>{" "}
-            pages will be deleted
-          </p>
+    <div className="dedup-wrapper">
+      {/* Summary */}
+      <div className="dedup-summary">
+        <div className="dedup-stat">
+          <span className="dedup-stat-value">{duplicateGroups.length}</span>
+          <span className="dedup-stat-label">duplicate groups</span>
         </div>
+        <div className="dedup-stat">
+          <span className="dedup-stat-value">{pageIdsToAction.length}</span>
+          <span className="dedup-stat-label">pages to {mode}</span>
+        </div>
+        {isLoading && (
+          <p className="dedup-loading-note">Still loading — more duplicates may appear</p>
+        )}
       </div>
 
-      {/* Duplicate Groups */}
-      <div className="space-y-4">
-        {duplicateGroups.map((group) => (
-          <div
-            key={group.value}
-            className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden"
-          >
-            <div className="bg-gray-800 px-6 py-4 border-b border-gray-700">
-              <p className="text-gray-300 font-mono text-sm">
-                {group.value || "(empty value)"}
-              </p>
-              <p className="text-gray-500 text-sm mt-1">
-                {group.pages.length} pages
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-800 bg-gray-950">
-                    <th className="px-6 py-3 text-left text-gray-400 font-medium">
-                      Title
-                    </th>
-                    <th className="px-6 py-3 text-left text-gray-400 font-medium">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-right text-gray-400 font-medium">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.pages.map((page, index) => (
-                    <tr
-                      key={page.id}
-                      className={
-                        index === 0
-                          ? "bg-gray-900 border-b border-gray-800"
-                          : "bg-gray-950 border-b border-gray-800"
-                      }
-                    >
-                      <td className="px-6 py-4 text-gray-300">
-                        {page.title}
-                      </td>
-                      <td className="px-6 py-4 text-gray-500 text-xs font-mono">
-                        {new Date(page.created_time).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {index === 0 ? (
-                          <span className="inline-block bg-green-900 text-green-300 px-3 py-1 rounded text-xs font-semibold">
-                            KEEP
-                          </span>
-                        ) : (
-                          <span className="inline-block bg-red-900 text-red-300 px-3 py-1 rounded text-xs font-semibold">
-                            DELETE
-                          </span>
-                        )}
-                      </td>
+      {/* Groups */}
+      <div className="dedup-groups">
+        {duplicateGroups.map((group) => {
+          const keepId = effectiveKeepId(group);
+          return (
+            <div key={group.value} className="dedup-group">
+              <div className="dedup-group-header">
+                <p className="dedup-group-value">{group.value || "(empty value)"}</p>
+                <p className="dedup-group-count">{group.pages.length} pages</p>
+              </div>
+              <div className="dedup-table-scroll">
+                <table className="dedup-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Created</th>
+                      <th>Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {group.pages.map((page) => {
+                      const isKept = page.id === keepId;
+                      const isExcluded = excludedIds.has(page.id);
+                      return (
+                        <tr
+                          key={page.id}
+                          className={isKept ? "dedup-row-keep" : "dedup-row-delete"}
+                        >
+                          <td>{page.title}</td>
+                          <td className="mono">
+                            {new Date(page.created_time).toLocaleDateString()}
+                          </td>
+                          <td className="dedup-action-cell">
+                            <label className="dedup-radio-label">
+                              <input
+                                type="radio"
+                                name={`keep-${group.value}`}
+                                checked={isKept}
+                                onChange={() => handleKeepChange(group, page.id)}
+                              />
+                              <span className={`badge ${isKept ? "badge-keep" : "badge-delete"}`}>
+                                {isKept ? "Keep" : "Delete"}
+                              </span>
+                            </label>
+                            {!isKept && (
+                              <input
+                                type="checkbox"
+                                className="dedup-checkbox"
+                                checked={!isExcluded}
+                                title={isExcluded ? "Skipped — won't be actioned" : "Will be actioned"}
+                                onChange={(e) =>
+                                  handleExcludeToggle(page.id, !e.target.checked)
+                                }
+                              />
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Delete Button */}
-      <div className="flex justify-end">
+      {/* Actions */}
+      <div className="dedup-actions">
+        <div className="dedup-mode-toggle">
+          <label className={`dedup-mode-option ${mode === "archive" ? "active" : ""}`}>
+            <input
+              type="radio"
+              name="mode"
+              value="archive"
+              checked={mode === "archive"}
+              onChange={() => setMode("archive")}
+            />
+            Archive <span className="dedup-mode-hint">(safer, recoverable)</span>
+          </label>
+          <label className={`dedup-mode-option ${mode === "delete" ? "active" : ""}`}>
+            <input
+              type="radio"
+              name="mode"
+              value="delete"
+              checked={mode === "delete"}
+              onChange={() => setMode("delete")}
+            />
+            Permanently delete
+          </label>
+        </div>
         <button
-          onClick={handleDeleteDuplicates}
-          disabled={deleting || pagesToDelete === 0}
-          className={`font-semibold py-3 px-6 rounded-lg transition duration-200 ${
-            deleting || pagesToDelete === 0
-              ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : "bg-red-600 hover:bg-red-700 text-white"
-          }`}
+          onClick={handleAction}
+          disabled={acting || pageIdsToAction.length === 0}
+          className={`dedup-action-btn ${mode === "delete" ? "dedup-action-btn--danger" : ""}`}
         >
-          {deleting ? "Deleting..." : `Delete ${pagesToDelete} duplicates`}
+          {actionLabel}
         </button>
       </div>
     </div>

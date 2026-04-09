@@ -157,24 +157,38 @@ export async function getDatabaseSchema(
 
 export async function listDatabases(token: string): Promise<NotionDatabase[]> {
   const headers = notionHeaders(token);
-  const response = await fetch("https://api.notion.com/v1/search", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      filter: {
-        value: "database",
-        property: "object",
-      },
-      page_size: 100,
-    }),
+  const body = JSON.stringify({
+    filter: { value: "database", property: "object" },
+    page_size: 100,
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to list databases: ${response.status}`);
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+
+    const response = await fetch("https://api.notion.com/v1/search", {
+      method: "POST",
+      headers,
+      body,
+    });
+
+    if (response.status === 504 || response.status === 502 || response.status === 503) {
+      lastError = new Error(`Failed to list databases: ${response.status} (attempt ${attempt + 1}/3)`);
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to list databases: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.results || [];
   }
 
-  const data = await response.json();
-  return data.results || [];
+  throw lastError ?? new Error("Failed to list databases after 3 attempts");
 }
 
 export async function deletePage(pageId: string, token: string): Promise<void> {
@@ -186,5 +200,18 @@ export async function deletePage(pageId: string, token: string): Promise<void> {
 
   if (!response.ok) {
     throw new Error(`Failed to delete page: ${response.status}`);
+  }
+}
+
+export async function archivePage(pageId: string, token: string): Promise<void> {
+  const headers = notionHeaders(token);
+  const response = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ archived: true }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to archive page: ${response.status}`);
   }
 }
