@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 
-export type DedupPhase = "running" | "paused" | "done" | "error";
+export type DedupPhase = "running" | "paused" | "done" | "error" | "preview";
 export type DedupMode = "archive" | "delete";
 
 export interface DedupStats {
@@ -58,22 +58,6 @@ const initialState: DedupState = {
   stats: { scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0 },
   errorMessage: "",
 };
-
-function loadPersistedState(): DedupState | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    // If it was running, restore as paused (since the stream is gone)
-    if (parsed.phase === "running") {
-      parsed.phase = "paused";
-    }
-    return parsed as DedupState;
-  } catch {
-    return null;
-  }
-}
 
 function saveState(state: DedupState) {
   if (typeof window === "undefined") return;

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NotionProperty, type NotionDatabase } from "@/lib/notion";
-import DeduplicateView from "./DeduplicateView";
 import AutoDeduplicateView from "./AutoDeduplicateView";
 import "./DatabaseSelector.css";
 
@@ -38,13 +37,11 @@ export default function DatabaseSelector({
   const [pagesLoading, setPagesLoading] = useState(false);
   const [pagesLoaded, setPagesLoaded] = useState(0);
   const [error, setError] = useState<string>("");
-  const [dedupeMode, setDedupeMode] = useState<"review" | "auto" | null>(null);
   const [autoActionMode, setAutoActionMode] = useState<"archive" | "delete">("archive");
+  const [autoTiming, setAutoTiming] = useState<"now" | "later">("later");
   const [autoStarted, setAutoStarted] = useState(false);
   const [dryRunConfirmed, setDryRunConfirmed] = useState(false);
   const [skipEmpty, setSkipEmpty] = useState(true);
-
-  // Preview state — first 50 rows shown at the bottom
   const [previewPages, setPreviewPages] = useState<Page[]>([]);
   const [previewHasMore, setPreviewHasMore] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -135,7 +132,6 @@ export default function DatabaseSelector({
     setPages([]);
     setPagesLoaded(0);
     setError("");
-    setDedupeMode(null);
     setAutoStarted(false);
     setDryRunConfirmed(false);
     setPreviewPages([]);
@@ -193,12 +189,9 @@ export default function DatabaseSelector({
   const handlePropertySelect = (propertyName: string) => {
     if (!propertyName || !selectedDatabaseId) return;
     setSelectedProperty(propertyName);
-    setDedupeMode(null);
     setAutoStarted(false);
     setDryRunConfirmed(false);
   };
-
-  const isLoading = schemaLoading || pagesLoading;
 
   useEffect(() => {
     if (!pagesLoading) return;
@@ -221,16 +214,26 @@ export default function DatabaseSelector({
     [properties, selectedProperty]
   );
 
+  const isProcessing = autoStarted;
+  const selectedDatabase = databases.find((db) => db.id === selectedDatabaseId);
+
+  const hasContent =
+    (selectedDatabaseId && !autoStarted) ||
+    (selectedProperty && autoStarted);
+
   return (
-    <div className="db-selector">
+    <div className="db-layout">
       {error && <div className="db-error">{error}</div>}
 
-      <div className="db-card">
-        <label className="db-card-label">Select Database</label>
+      {/* ── Sentence-style configuration row ── */}
+      <div className="db-config-row">
+        <span>Deduplicate</span>
+
+        {/* Database selector */}
         <select
           value={selectedDatabaseId}
           onChange={(e) => handleDatabaseSelect(e.target.value)}
-          className="db-select"
+          className="db-select db-config-select"
         >
           <option value="">Choose a database…</option>
           {databases.map((db) => (
@@ -239,247 +242,201 @@ export default function DatabaseSelector({
             </option>
           ))}
         </select>
+
+        <span>by</span>
+
+        {/* Field selector — visible only if database selected */}
+        {selectedDatabaseId && properties.length > 0 && !schemaLoading && (
+          <>
+            <select
+              value={selectedProperty}
+              onChange={(e) => handlePropertySelect(e.target.value)}
+              className="db-select db-config-select"
+            >
+              <option value="">Choose a field…</option>
+              {properties.map((prop) => (
+                <option key={prop.name} value={prop.name}>
+                  {prop.name} ({prop.type})
+                </option>
+              ))}
+            </select>
+
+            <span>by</span>
+
+            {/* Archive/Delete selector — visible only if field selected */}
+            {selectedProperty && (
+              <>
+                <select
+                  value={autoActionMode}
+                  onChange={(e) => setAutoActionMode(e.target.value as "archive" | "delete")}
+                  className="db-select db-config-select"
+                >
+                  <option value="archive">archive</option>
+                  <option value="delete">delete</option>
+                </select>
+
+                <span>magically</span>
+
+                {/* Now/Later selector — visible only if action mode selected */}
+                <select
+                  value={autoTiming}
+                  onChange={(e) => setAutoTiming(e.target.value as "now" | "later")}
+                  className="db-select db-config-select"
+                >
+                  <option value="now">now</option>
+                  <option value="later">later</option>
+                </select>
+
+                {/* Checkmark button */}
+                <button
+                  onClick={() => setAutoStarted(true)}
+                  className="db-config-checkmark"
+                  title="Start deduplication process"
+                >
+                  ✓
+                </button>
+              </>
+            )}
+          </>
+        )}
+
+        {/* Schema loading indicator */}
+        {schemaLoading && <div className="db-spinner db-spinner--sm" />}
       </div>
 
-      {selectedDatabaseId && properties.length > 0 && !schemaLoading && (
-        <div className="db-card">
-          <label className="db-card-label">Deduplicate By</label>
-          <select
-            value={selectedProperty}
-            onChange={(e) => handlePropertySelect(e.target.value)}
-            className="db-select"
-          >
-            <option value="">Choose a field…</option>
-            {properties.map((prop) => (
-              <option key={prop.name} value={prop.name}>
-                {prop.name} ({prop.type})
-              </option>
-            ))}
-          </select>
-
-          {selectedProperty && (
-            <label className="db-skip-empty">
-              <input
-                type="checkbox"
-                checked={skipEmpty}
-                onChange={(e) => {
-                  setSkipEmpty(e.target.checked);
-                  setDedupeMode(null);
-                  setAutoStarted(false);
-                }}
-              />
-              <span>
-                Skip pages where <strong>{selectedProperty}</strong> is empty
-                <span className="db-mode-hint"> — prevents blank values from matching each other</span>
-              </span>
-            </label>
-          )}
-        </div>
+      {/* Skip empty checkbox — shown when field selected and not processing */}
+      {selectedProperty && !autoStarted && (
+        <label className="db-skip-empty">
+          <input
+            type="checkbox"
+            checked={skipEmpty}
+            onChange={(e) => {
+              setSkipEmpty(e.target.checked);
+              setAutoStarted(false);
+              setDryRunConfirmed(false);
+            }}
+          />
+          <span>
+            Skip pages where <strong>{selectedProperty}</strong> is empty
+            <span className="db-mode-hint"> — prevents blank values from matching each other</span>
+          </span>
+        </label>
       )}
 
-      {selectedProperty && dedupeMode === null && !schemaLoading && !pagesLoading && (
-        <div className="db-card">
-          <div className="db-mode-choice">
-            <p className="db-mode-label">How would you like to proceed?</p>
-            <button
-              onClick={() => {
-                setDedupeMode("review");
-                loadPages(selectedDatabaseId, selectedProperty);
-              }}
-              className="db-mode-btn"
-            >
-              Scan &amp; Review
-              <span className="db-mode-hint">See all duplicates and decide what to keep before anything is removed</span>
-            </button>
-            <button
-              onClick={() => setDedupeMode("auto")}
-              className="db-mode-btn"
-            >
-              Auto-deduplicate
-              <span className="db-mode-hint">Remove duplicates automatically — no reviewing needed</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── Main content area ── */}
+      <div className="db-main-content">
 
-      {schemaLoading && (
-        <div className="db-loading">
-          <div className="db-spinner" />
-          <p className="db-loading-text">Loading schema…</p>
-        </div>
-      )}
-
-      {pagesLoading && dedupeMode !== "review" && (
-        <div className="db-loading">
-          <div className="db-spinner" />
-          <p className="db-loading-text">
-            Scanning pages… {pagesLoaded > 0 ? `${pagesLoaded} loaded` : ""}
-          </p>
-        </div>
-      )}
-
-      {selectedProperty && dedupeMode === "auto" && !autoStarted && (
-        <div className="db-card">
-          <div className="db-auto-confirm">
-            <div className="db-auto-mode-toggle">
-              <label className={`dedup-mode-option ${autoActionMode === "archive" ? "active" : ""}`}>
-                <input
-                  type="radio"
-                  name="auto-mode"
-                  value="archive"
-                  checked={autoActionMode === "archive"}
-                  onChange={() => setAutoActionMode("archive")}
-                />
-                Archive <span className="dedup-mode-hint">(safer, recoverable)</span>
-              </label>
-              <label className={`dedup-mode-option ${autoActionMode === "delete" ? "active" : ""}`}>
-                <input
-                  type="radio"
-                  name="auto-mode"
-                  value="delete"
-                  checked={autoActionMode === "delete"}
-                  onChange={() => setAutoActionMode("delete")}
-                />
-                Permanently delete <span className="dedup-mode-hint">(cannot be undone)</span>
-              </label>
-            </div>
-            {autoActionMode === "delete" && (
-              <p className="db-delete-warning">
-                Archive moves pages to Notion&rsquo;s trash — restorable for 30&nbsp;days.
-                Delete permanently removes them with no recovery.{" "}
-                <a
-                  href="https://www.notion.com/help/archive-or-delete-content"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="db-delete-warning-link"
-                >
-                  Learn more
-                </a>
-              </p>
-            )}
-            <p className="db-auto-confirm-note">
-              This will scan your database and show a preview before making any changes.
+        {/* Empty placeholder — nothing selected yet */}
+        {!hasContent && !schemaLoading && !pagesLoading && !previewLoading && (
+          <div className="db-content-placeholder">
+            <p className="db-placeholder-text">
+              {!selectedDatabaseId
+                ? "Select a database to get started"
+                : !selectedProperty
+                ? "Choose a field to deduplicate by"
+                : "Select archive or delete, then click the checkmark to proceed"}
             </p>
-            <button
-              onClick={() => setAutoStarted(true)}
-              className="db-auto-start-btn"
-            >
-              Scan for Duplicates
-            </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Preview table — only while no dedup mode is active */}
-      {selectedDatabaseId && dedupeMode === null && (previewLoading || previewPages.length > 0) && (
-        <div className="db-card db-preview-card">
-          <div className="db-preview-header">
-            <span className="db-card-label" style={{ marginBottom: 0 }}>
-              Preview
-            </span>
-            {previewLoading && <div className="db-spinner db-spinner--sm" />}
-            {!previewLoading && (
-              <span className="db-preview-count">
-                {previewPages.length} rows
-                {previewHasMore ? " (more in database)" : ""}
+        {/* Preview table — only while not processing auto-dedup */}
+        {selectedDatabaseId && !autoStarted && (previewLoading || previewPages.length > 0) && (
+          <div className="db-card db-preview-card">
+            <div className="db-preview-header">
+              <span className="db-card-label" style={{ marginBottom: 0 }}>
+                Preview
               </span>
-            )}
-          </div>
-          {previewPages.length > 0 && (() => {
-            const totalPages = Math.ceil(previewPages.length / PREVIEW_PAGE_SIZE);
-            const start = previewPage * PREVIEW_PAGE_SIZE;
-            const visibleRows = previewPages.slice(start, start + PREVIEW_PAGE_SIZE);
-            return (
-              <>
-                <div className="db-preview-scroll">
-                  <table className="db-preview-table">
-                    <thead>
-                      <tr>
-                        <th>Title</th>
-                        {previewColumns.map((col) => (
-                          <th
-                            key={col.name}
-                            className={col.name === selectedProperty ? "db-preview-th--active" : ""}
-                          >
-                            {col.name}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleRows.map((page) => (
-                        <tr key={page.id}>
-                          <td className="db-preview-title">{page.title}</td>
+              {previewLoading && <div className="db-spinner db-spinner--sm" />}
+              {!previewLoading && (
+                <span className="db-preview-count">
+                  {previewPages.length} pages
+                  {previewHasMore ? " from many" : ""}
+                </span>
+              )}
+            </div>
+            {previewPages.length > 0 && (() => {
+              const totalPages = Math.ceil(previewPages.length / PREVIEW_PAGE_SIZE);
+              const start = previewPage * PREVIEW_PAGE_SIZE;
+              const visibleRows = previewPages.slice(start, start + PREVIEW_PAGE_SIZE);
+              return (
+                <>
+                  <div className="db-preview-scroll">
+                    <table className="db-preview-table">
+                      <thead>
+                        <tr>
+                          <th>Title</th>
                           {previewColumns.map((col) => (
-                            <td
+                            <th
                               key={col.name}
-                              className={`db-preview-cell${col.name === selectedProperty ? " db-preview-cell--active" : ""}${!page.properties[col.name] ? " db-preview-cell--empty" : ""}`}
+                              className={col.name === selectedProperty ? "db-preview-th--active" : ""}
                             >
-                              {page.properties[col.name] ?? <span className="db-preview-empty">—</span>}
-                            </td>
+                              {col.name}
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {totalPages > 1 && (
-                  <div className="db-preview-pagination">
-                    <button
-                      className="db-preview-page-btn"
-                      disabled={previewPage === 0}
-                      onClick={() => setPreviewPage((p) => p - 1)}
-                    >
-                      ‹ Prev
-                    </button>
-                    <span className="db-preview-page-info">
-                      {start + 1}–{Math.min(start + PREVIEW_PAGE_SIZE, previewPages.length)} of {previewPages.length}
-                    </span>
-                    <button
-                      className="db-preview-page-btn"
-                      disabled={previewPage >= totalPages - 1}
-                      onClick={() => setPreviewPage((p) => p + 1)}
-                    >
-                      Next ›
-                    </button>
+                      </thead>
+                      <tbody>
+                        {visibleRows.map((page) => (
+                          <tr key={page.id}>
+                            <td className="db-preview-title">{page.title}</td>
+                            {previewColumns.map((col) => (
+                              <td
+                                key={col.name}
+                                className={`db-preview-cell${col.name === selectedProperty ? " db-preview-cell--active" : ""}${!page.properties[col.name] ? " db-preview-cell--empty" : ""}`}
+                              >
+                                {page.properties[col.name] ?? <span className="db-preview-empty">—</span>}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                )}
-              </>
-            );
-          })()}
-        </div>
-      )}
+                  {totalPages > 1 && (
+                    <div className="db-preview-pagination">
+                      <button
+                        className="db-preview-page-btn"
+                        disabled={previewPage === 0}
+                        onClick={() => setPreviewPage((p) => p - 1)}
+                      >
+                        ‹ Prev
+                      </button>
+                      <span className="db-preview-page-info">
+                        {start + 1}–{Math.min(start + PREVIEW_PAGE_SIZE, previewPages.length)} of {previewPages.length}
+                      </span>
+                      <button
+                        className="db-preview-page-btn"
+                        disabled={previewPage >= totalPages - 1}
+                        onClick={() => setPreviewPage((p) => p + 1)}
+                      >
+                        Next ›
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        )}
 
-      {/* Review mode — replaces preview once scanning starts */}
-      {selectedProperty && dedupeMode === "review" && (pages.length > 0 || pagesLoading) && (
-        <DeduplicateView
-          pages={pages}
-          fieldName={selectedProperty}
-          isLoading={pagesLoading}
-          skipEmpty={skipEmpty}
-        />
-      )}
+        {/* Auto-deduplicate live view */}
+        {selectedProperty && autoStarted && (
+          <AutoDeduplicateView
+            key={dryRunConfirmed ? "real-run" : "dry-run"}
+            databaseId={selectedDatabaseId}
+            databaseName={
+              databases.find((db) => db.id === selectedDatabaseId)?.title?.[0]?.plain_text ??
+              "Untitled database"
+            }
+            fieldName={selectedProperty}
+            mode={autoActionMode}
+            skipEmpty={skipEmpty}
+            dryRun={autoTiming === "later" && !dryRunConfirmed}
+            onConfirm={() => setDryRunConfirmed(true)}
+          />
+        )}
 
-      {selectedProperty && dedupeMode === "review" && pages.length === 0 && !pagesLoading && (
-        <div className="db-empty">No pages found in this database</div>
-      )}
-
-      {/* Auto-deduplicate live view */}
-      {selectedProperty && dedupeMode === "auto" && autoStarted && (
-        <AutoDeduplicateView
-          key={dryRunConfirmed ? "real-run" : "dry-run"}
-          databaseId={selectedDatabaseId}
-          databaseName={
-            databases.find((db) => db.id === selectedDatabaseId)?.title?.[0]?.plain_text ??
-            "Untitled database"
-          }
-          fieldName={selectedProperty}
-          mode={autoActionMode}
-          skipEmpty={skipEmpty}
-          dryRun={!dryRunConfirmed}
-          onConfirm={() => setDryRunConfirmed(true)}
-        />
-      )}
+      </div>
     </div>
   );
 }

@@ -1,9 +1,77 @@
-.db-selector {
+/* ── Main layout ── */
+.db-layout {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
+/* ── Configuration row (sentence-style) ── */
+.db-config-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-rim);
+  border-radius: 6px;
+  font-size: 0.9375rem;
+}
+
+.db-config-select {
+  width: auto;
+  min-width: 120px;
+}
+
+.db-config-checkmark {
+  margin-left: auto;
+  padding: 0.4375rem 0.875rem;
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-family: inherit;
+}
+
+.db-config-checkmark:hover {
+  background: var(--color-accent-hover);
+}
+
+.db-config-checkmark:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Main content area ── */
+.db-main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Content placeholder ── */
+.db-content-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  border: 1px dashed var(--color-rim);
+  border-radius: 6px;
+  background: var(--color-canvas);
+}
+
+.db-placeholder-text {
+  font-size: 0.9375rem;
+  color: var(--color-muted);
+  margin: 0;
+  text-align: center;
+}
+
+/* ── Shared card ── */
 .db-error {
   background: rgba(235, 87, 87, 0.1);
   border: 1px solid rgba(235, 87, 87, 0.3);
@@ -17,7 +85,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-rim);
   border-radius: 6px;
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .db-card-label {
@@ -31,7 +99,6 @@
 }
 
 .db-select {
-  width: 100%;
   background: var(--color-canvas);
   border: 1px solid var(--color-rim);
   color: var(--color-text);
@@ -42,6 +109,11 @@
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   font-family: inherit;
+}
+
+/* For card contexts: full width */
+.db-card .db-select {
+  width: 100%;
 }
 
 .db-select:focus {
@@ -89,6 +161,7 @@
   font-size: 0.9375rem;
 }
 
+/* ── Mode choice ── */
 .db-mode-choice {
   display: flex;
   flex-direction: column;
@@ -113,7 +186,7 @@
   padding: 0.75rem 1rem;
   border-radius: 4px;
   border: 1px solid var(--color-rim);
-  background: var(--color-surface);
+  background: var(--color-canvas);
   cursor: pointer;
   text-align: left;
   font-size: 0.875rem;
@@ -137,6 +210,7 @@
   color: var(--color-muted);
 }
 
+/* ── Auto confirm ── */
 .db-auto-confirm {
   display: flex;
   flex-direction: column;
@@ -145,8 +219,8 @@
 
 .db-auto-mode-toggle {
   display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .dedup-mode-option {
@@ -190,7 +264,7 @@
   font-size: 0.875rem;
   border: none;
   cursor: pointer;
-  width: fit-content;
+  width: 100%;
   transition: background 0.1s;
   font-family: inherit;
 }
@@ -199,7 +273,23 @@
   background: var(--color-accent-hover);
 }
 
-/* Preview table */
+/* ── Skip empty checkbox ── */
+.db-skip-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.db-skip-empty input[type="checkbox"] {
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+}
+
+/* ── Preview table ── */
 .db-preview-card {
   padding: 1.25rem 1.5rem;
 }
@@ -287,23 +377,7 @@
   color: var(--color-muted);
 }
 
-/* Skip empty checkbox */
-.db-skip-empty {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin-top: 0.875rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  line-height: 1.4;
-}
-
-.db-skip-empty input[type="checkbox"] {
-  margin-top: 0.1rem;
-  flex-shrink: 0;
-}
-
-/* Preview pagination */
+/* ── Preview pagination ── */
 .db-preview-pagination {
   display: flex;
   align-items: center;
@@ -338,7 +412,7 @@
   color: var(--color-muted);
 }
 
-/* Delete warning callout */
+/* ── Delete warning callout ── */
 .db-delete-warning {
   font-size: 0.8125rem;
   color: #eb5757;
@@ -360,9 +434,65 @@
   opacity: 0.7;
 }
 
-/* Auto confirm note */
+/* ── Auto confirm note ── */
 .db-auto-confirm-note {
   font-size: 0.8125rem;
   color: var(--color-muted);
   margin: 0;
+}
+
+/* ── Info card — compact state during processing ── */
+.db-card--info {
+  background: var(--color-canvas);
+  padding: 1rem 1.25rem;
+}
+
+.db-info-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.db-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.db-info-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.db-info-value {
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* ── Mobile: optimize sentence row ── */
+@media (max-width: 720px) {
+  .db-layout {
+    gap: 1rem;
+  }
+
+  .db-config-row {
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .db-config-select {
+    min-width: 100px;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .db-config-checkmark {
+    margin-left: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.9rem;
+  }
 }

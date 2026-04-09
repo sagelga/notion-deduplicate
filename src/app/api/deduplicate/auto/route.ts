@@ -93,7 +93,14 @@ export async function GET(request: Request) {
         // before enqueueing — drops all unused Notion properties from memory.
         const fetchWorker = async () => {
           try {
+            send({ type: "stage", stage: "fetch", message: "Fetching pages from Notion..." });
+            let batchNum = 0;
             for await (const batch of paginateDatabase(databaseId, notionToken)) {
+              batchNum++;
+              send({
+                type: "notionAPI",
+                message: `Fetching batch ${batchNum} (${batch.length} pages)`,
+              });
               for (const rawPage of batch) {
                 let title = "(Untitled)";
                 if (titlePropName) {
@@ -116,6 +123,7 @@ export async function GET(request: Request) {
                 });
               }
             }
+            send({ type: "stage", stage: "fetch", message: `Fetched ${batchNum} batches` });
           } catch (err) {
             fetchError = err instanceof Error ? err : new Error(String(err));
           } finally {
@@ -129,12 +137,22 @@ export async function GET(request: Request) {
         // deletion — matching never blocks on a Notion API call.
         const matchWorker = async () => {
           try {
+            let stageStarted = false;
             while (!fetchDone || fetchQueue.length > 0) {
               if (fetchError) throw fetchError;
 
               if (fetchQueue.length === 0) {
+                if (!stageStarted && fetchDone) {
+                  send({ type: "stage", stage: "match", message: "Scanning for duplicates..." });
+                  stageStarted = true;
+                }
                 await new Promise<void>((resolve) => setTimeout(resolve, 5));
                 continue;
+              }
+
+              if (!stageStarted) {
+                send({ type: "stage", stage: "match", message: "Scanning for duplicates..." });
+                stageStarted = true;
               }
 
               const { id, created_time, title, fieldValue } = fetchQueue.shift()!;
@@ -186,16 +204,31 @@ export async function GET(request: Request) {
         // 3 concurrent workers drain deleteQueue. Each worker independently
         // awaits a Notion API call, so up to 3 deletions happen in parallel
         // without blocking the match stage.
-        const deleteWorker = async () => {
+        const createDeleteWorker = (workerId: number) => async () => {
+          let stageStarted = false;
           while (!matchDone || deleteQueue.length > 0) {
             if (deleteQueue.length === 0) {
+              if (!stageStarted && matchDone) {
+                send({ type: "stage", stage: "delete", message: `[Worker ${workerId}/3] Starting ${mode}...` });
+                stageStarted = true;
+              }
               await new Promise<void>((resolve) => setTimeout(resolve, 5));
               continue;
+            }
+
+            if (!stageStarted) {
+              send({ type: "stage", stage: "delete", message: `[Worker ${workerId}/3] Starting ${mode}...` });
+              stageStarted = true;
             }
 
             const { id: pageId, title, fieldValue } = deleteQueue.shift()!;
 
             try {
+              const action = mode === "archive" ? "archiving" : "deleting";
+              send({
+                type: "notionAPI",
+                message: `[Worker ${workerId}/3] ${action.charAt(0).toUpperCase() + action.slice(1)} page: "${title}"`,
+              });
               if (mode === "archive") {
                 await archivePage(pageId, notionToken);
               } else {
@@ -234,21 +267,31 @@ export async function GET(request: Request) {
         // Run all stages concurrently: 1 fetch + 1 match + 3 delete (or drain) workers
         const workers = [fetchWorker(), matchWorker()];
         if (!dryRun) {
-          workers.push(deleteWorker(), deleteWorker(), deleteWorker());
+          workers.push(createDeleteWorker(1)(), createDeleteWorker(2)(), createDeleteWorker(3)());
         } else {
           // In dry-run mode, drain the deleteQueue without acting — just emit as pending
-          const drainWorker = async () => {
+          const createDrainWorker = (workerId: number) => async () => {
+            let stageStarted = false;
             while (!matchDone || deleteQueue.length > 0) {
               if (deleteQueue.length === 0) {
+                if (!stageStarted && matchDone) {
+                  send({ type: "stage", stage: "preview", message: `[Worker ${workerId}/3] Ready (dry-run mode)` });
+                  stageStarted = true;
+                }
                 await new Promise<void>((resolve) => setTimeout(resolve, 5));
                 continue;
+              }
+
+              if (!stageStarted) {
+                send({ type: "stage", stage: "preview", message: `[Worker ${workerId}/3] Ready (dry-run mode)` });
+                stageStarted = true;
               }
 
               const { id: pageId, title, fieldValue } = deleteQueue.shift()!;
               send({ type: "page", id: pageId, title, fieldValue, status: "pending" });
             }
           };
-          workers.push(drainWorker(), drainWorker(), drainWorker());
+          workers.push(createDrainWorker(1)(), createDrainWorker(2)(), createDrainWorker(3)());
         }
         await Promise.all(workers);
 

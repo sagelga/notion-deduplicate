@@ -28,7 +28,10 @@
       "WebFetch(domain:www.ayn8n.com)",
       "WebFetch(domain:latwy.co)",
       "mcp__claude_ai_Notion__notion-fetch",
-      "mcp__claude_ai_Notion__notion-update-page"
+      "mcp__claude_ai_Notion__notion-update-page",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s http://localhost:3000/duplicate)",
+      "Bash(pkill -f \"next dev\")"
     ]
   }
 }
