@@ -55,6 +55,13 @@ export default function DatabaseSelector({
   const pagesAccRef = useRef<Page[]>([]);
   const rafRef = useRef<number | null>(null);
 
+  // Auto-select first database on mount
+  useEffect(() => {
+    if (databases.length > 0 && !selectedDatabaseId) {
+      handleDatabaseSelect(databases[0].id);
+    }
+  }, [databases, selectedDatabaseId]);
+
   const loadPages = async (databaseId: string, propertyName: string) => {
     setSelectedProperty(propertyName);
     setPages([]);

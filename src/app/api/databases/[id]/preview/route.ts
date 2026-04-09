@@ -19,13 +19,13 @@ export async function GET(
   try {
     const headers = notionHeaders(notionToken);
 
-    // Fetch schema and first 50 pages in parallel
+    // Fetch schema and first 20 pages in parallel
     const [schema, pagesRes] = await Promise.all([
       getDatabaseSchema(databaseId, notionToken),
       fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ page_size: 50 }),
+        body: JSON.stringify({ page_size: 20 }),
       }),
     ]);
 
