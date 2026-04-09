@@ -90,40 +90,39 @@ export async function* paginateDatabase(
   token: string
 ): AsyncGenerator<RawNotionPage[]> {
   const headers = notionHeaders(token);
-  let startCursor: string | undefined;
+
+  type PageResult = { results: RawNotionPage[]; has_more: boolean; next_cursor: string | null };
+
+  const fetchPage = (cursor: string | undefined): Promise<PageResult> =>
+    fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }),
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Failed to fetch database: ${res.status} ${res.statusText}`);
+      return res.json() as Promise<PageResult>;
+    });
+
+  // Kick off first fetch immediately
+  let pending = fetchPage(undefined);
 
   while (true) {
-    const response = await fetch(
-      `https://api.notion.com/v1/databases/${databaseId}/query`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          page_size: 100,
-          start_cursor: startCursor,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch database: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const data = await response.json();
+    const data = await pending;
     const pages: RawNotionPage[] = data.results || [];
+
+    // Prefetch next batch before yielding current batch — overlaps network
+    // latency with consumer processing time, eliminating the serial wait.
+    if (data.has_more && data.next_cursor) {
+      pending = fetchPage(data.next_cursor);
+    }
 
     if (pages.length > 0) {
       yield pages;
     }
 
-    // Check if there are more pages
     if (!data.has_more) {
       break;
     }
-
-    startCursor = data.next_cursor;
   }
 }
 

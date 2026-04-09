@@ -245,12 +245,12 @@ export default function DatabaseSelector({
   const actionModeOptions: CustomDropdownOption[] = [
     {
       value: "archive",
-      label: "Archive",
+      label: "archiving",
       description: "Move to trash, recoverable for 30 days",
     },
     {
       value: "delete",
-      label: "Delete",
+      label: "deleting",
       description: "Permanently remove with no recovery",
     },
   ];
@@ -258,12 +258,12 @@ export default function DatabaseSelector({
   const executionModeOptions: CustomDropdownOption[] = [
     {
       value: "magically",
-      label: "Magically",
+      label: "magically",
       description: "Auto-detect & remove duplicates automatically",
     },
     {
       value: "manually",
-      label: "Manually",
+      label: "manually",
       description: "Review duplicates before removing (coming soon)",
       disabled: true,
     },
@@ -272,12 +272,12 @@ export default function DatabaseSelector({
   const timingOptions: CustomDropdownOption[] = [
     {
       value: "now",
-      label: "Now",
+      label: "now",
       description: "Execute immediately without preview",
     },
     {
       value: "later",
-      label: "Later",
+      label: "later",
       description: "Show preview first, then confirm action",
     },
   ];
