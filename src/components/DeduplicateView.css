@@ -181,6 +181,52 @@
   background: rgba(235, 87, 87, 0.1);
 }
 
+/* Notion page link */
+.dedup-page-link {
+  color: var(--color-text);
+  text-decoration: none;
+  transition: color 0.1s;
+}
+
+.dedup-page-link:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+/* Pagination */
+.dedup-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.dedup-page-btn {
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-rim);
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.dedup-page-btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.dedup-page-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.dedup-page-info {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
 /* Actions section */
 .dedup-actions {
   display: flex;

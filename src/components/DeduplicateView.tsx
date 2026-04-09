@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./DeduplicateView.css";
 
 interface Page {
@@ -16,6 +16,12 @@ interface DuplicateGroup {
 }
 
 type Mode = "archive" | "delete";
+
+const GROUPS_PER_PAGE = 10;
+
+function notionPageUrl(id: string) {
+  return `https://www.notion.so/${id.replace(/-/g, "")}`;
+}
 
 export default function DeduplicateView({
   pages,
@@ -33,6 +39,7 @@ export default function DeduplicateView({
   const [mode, setMode] = useState<Mode>("archive");
   const [acting, setActing] = useState(false);
   const [result, setResult] = useState<{ actioned: number; errors: number; mode: Mode } | null>(null);
+  const [groupPage, setGroupPage] = useState(0);
 
   useEffect(() => {
     if (!acting) return;
@@ -41,31 +48,41 @@ export default function DeduplicateView({
     return () => window.removeEventListener("beforeunload", handler);
   }, [acting]);
 
-  // Group pages by field value
-  const groups = new Map<string, Page[]>();
-  for (const page of pages) {
-    const value = page.properties[fieldName] ?? "(empty)";
-    if (skipEmpty && (value === "(empty)" || value === null)) continue;
-    if (!groups.has(value)) groups.set(value, []);
-    groups.get(value)!.push(page);
-  }
+  const duplicateGroups = useMemo<DuplicateGroup[]>(() => {
+    const groups = new Map<string, Page[]>();
+    for (const page of pages) {
+      const value = page.properties[fieldName] ?? "(empty)";
+      if (skipEmpty && (value === "(empty)" || value === null)) continue;
+      if (!groups.has(value)) groups.set(value, []);
+      groups.get(value)!.push(page);
+    }
+    return Array.from(groups.entries())
+      .filter(([, g]) => g.length > 1)
+      .map(([value, g]) => ({
+        value,
+        pages: [...g].sort(
+          (a, b) => new Date(a.created_time).getTime() - new Date(b.created_time).getTime()
+        ),
+      }))
+      .sort((a, b) => b.pages.length - a.pages.length);
+  }, [pages, fieldName, skipEmpty]);
 
-  // Filter to duplicates, sort each group oldest-first
-  const duplicateGroups: DuplicateGroup[] = Array.from(groups.entries())
-    .filter(([, g]) => g.length > 1)
-    .map(([value, g]) => ({
-      value,
-      pages: [...g].sort(
-        (a, b) => new Date(a.created_time).getTime() - new Date(b.created_time).getTime()
-      ),
-    }))
-    .sort((a, b) => b.pages.length - a.pages.length);
+  // Auto-jump to last page while scanning so user sees incoming duplicates
+  useEffect(() => {
+    if (!isLoading) return;
+    const lastPage = Math.max(0, Math.ceil(duplicateGroups.length / GROUPS_PER_PAGE) - 1);
+    setGroupPage(lastPage);
+  }, [duplicateGroups.length, isLoading]);
 
-  // Effective keep ID per group (user selection or default: oldest)
+  const totalGroupPages = Math.max(1, Math.ceil(duplicateGroups.length / GROUPS_PER_PAGE));
+  const visibleGroups = duplicateGroups.slice(
+    groupPage * GROUPS_PER_PAGE,
+    (groupPage + 1) * GROUPS_PER_PAGE
+  );
+
   const effectiveKeepId = (group: DuplicateGroup) =>
     keepSelections.get(group.value) ?? group.pages[0].id;
 
-  // Pages that will actually be acted on
   const pageIdsToAction = duplicateGroups.flatMap((group) => {
     const keepId = effectiveKeepId(group);
     return group.pages
@@ -75,7 +92,6 @@ export default function DeduplicateView({
 
   const handleKeepChange = (group: DuplicateGroup, pageId: string) => {
     setKeepSelections((prev) => new Map(prev).set(group.value, pageId));
-    // Reset checkbox state for the whole group so newly-demoted pages start checked
     setExcludedIds((prev) => {
       const next = new Set(prev);
       group.pages.forEach((p) => next.delete(p.id));
@@ -86,11 +102,8 @@ export default function DeduplicateView({
   const handleExcludeToggle = (pageId: string, excluded: boolean) => {
     setExcludedIds((prev) => {
       const next = new Set(prev);
-      if (excluded) {
-        next.add(pageId);
-      } else {
-        next.delete(pageId);
-      }
+      if (excluded) next.add(pageId);
+      else next.delete(pageId);
       return next;
     });
   };
@@ -152,13 +165,13 @@ export default function DeduplicateView({
           <span className="dedup-stat-label">pages to {mode}</span>
         </div>
         {isLoading && (
-          <p className="dedup-loading-note">Still loading — more duplicates may appear</p>
+          <p className="dedup-loading-note">Still scanning — more may appear</p>
         )}
       </div>
 
       {/* Groups */}
       <div className="dedup-groups">
-        {duplicateGroups.map((group) => {
+        {visibleGroups.map((group) => {
           const keepId = effectiveKeepId(group);
           return (
             <div key={group.value} className="dedup-group">
@@ -185,7 +198,16 @@ export default function DeduplicateView({
                           key={page.id}
                           className={userSelected ? (isKept ? "dedup-row-keep" : "dedup-row-delete") : ""}
                         >
-                          <td>{page.title}</td>
+                          <td>
+                            <a
+                              href={notionPageUrl(page.id)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="dedup-page-link"
+                            >
+                              {page.title || "(Untitled)"}
+                            </a>
+                          </td>
                           <td className="mono">
                             {new Date(page.created_time).toLocaleDateString()}
                           </td>
@@ -224,6 +246,29 @@ export default function DeduplicateView({
         })}
       </div>
 
+      {/* Group pagination */}
+      {totalGroupPages > 1 && (
+        <div className="dedup-pagination">
+          <button
+            className="dedup-page-btn"
+            disabled={groupPage === 0}
+            onClick={() => setGroupPage((p) => p - 1)}
+          >
+            ‹ Prev
+          </button>
+          <span className="dedup-page-info">
+            {groupPage + 1} / {totalGroupPages}
+          </span>
+          <button
+            className="dedup-page-btn"
+            disabled={groupPage >= totalGroupPages - 1}
+            onClick={() => setGroupPage((p) => p + 1)}
+          >
+            Next ›
+          </button>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="dedup-actions">
         <div className="dedup-mode-toggle">
@@ -246,6 +291,7 @@ export default function DeduplicateView({
               onChange={() => setMode("delete")}
             />
             Permanently delete
+
           </label>
         </div>
         <button

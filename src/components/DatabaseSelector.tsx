@@ -279,26 +279,13 @@ export default function DatabaseSelector({
         </div>
       )}
 
-      {pagesLoading && (
+      {pagesLoading && dedupeMode !== "review" && (
         <div className="db-loading">
           <div className="db-spinner" />
           <p className="db-loading-text">
             Scanning pages… {pagesLoaded > 0 ? `${pagesLoaded} loaded` : ""}
           </p>
         </div>
-      )}
-
-      {selectedProperty && dedupeMode === "review" && pages.length > 0 && (
-        <DeduplicateView
-          pages={pages}
-          fieldName={selectedProperty}
-          isLoading={pagesLoading}
-          skipEmpty={skipEmpty}
-        />
-      )}
-
-      {selectedProperty && dedupeMode === "review" && pages.length === 0 && !isLoading && (
-        <div className="db-empty">No pages found in this database</div>
       )}
 
       {selectedProperty && dedupeMode === "auto" && !autoStarted && (
@@ -336,19 +323,8 @@ export default function DatabaseSelector({
         </div>
       )}
 
-      {selectedProperty && dedupeMode === "auto" && autoStarted && (
-        <div className="db-card">
-          <AutoDeduplicateView
-            databaseId={selectedDatabaseId}
-            fieldName={selectedProperty}
-            mode={autoActionMode}
-            skipEmpty={skipEmpty}
-          />
-        </div>
-      )}
-
-      {/* Preview table — shown at the bottom after database is selected */}
-      {selectedDatabaseId && (previewLoading || previewPages.length > 0) && (
+      {/* Preview table — only while no dedup mode is active */}
+      {selectedDatabaseId && dedupeMode === null && (previewLoading || previewPages.length > 0) && (
         <div className="db-card db-preview-card">
           <div className="db-preview-header">
             <span className="db-card-label" style={{ marginBottom: 0 }}>
@@ -425,6 +401,30 @@ export default function DatabaseSelector({
             );
           })()}
         </div>
+      )}
+
+      {/* Review mode — replaces preview once scanning starts */}
+      {selectedProperty && dedupeMode === "review" && (pages.length > 0 || pagesLoading) && (
+        <DeduplicateView
+          pages={pages}
+          fieldName={selectedProperty}
+          isLoading={pagesLoading}
+          skipEmpty={skipEmpty}
+        />
+      )}
+
+      {selectedProperty && dedupeMode === "review" && pages.length === 0 && !pagesLoading && (
+        <div className="db-empty">No pages found in this database</div>
+      )}
+
+      {/* Auto-deduplicate live view */}
+      {selectedProperty && dedupeMode === "auto" && autoStarted && (
+        <AutoDeduplicateView
+          databaseId={selectedDatabaseId}
+          fieldName={selectedProperty}
+          mode={autoActionMode}
+          skipEmpty={skipEmpty}
+        />
       )}
     </div>
   );
