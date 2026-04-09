@@ -3,6 +3,21 @@ import { archivePage, deletePage } from "@/lib/notion";
 
 export const runtime = 'edge';
 
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  const queue = [...items];
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift()!;
+      await fn(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
@@ -29,7 +44,7 @@ export async function POST(request: Request) {
     let actioned = 0;
     let errors = 0;
 
-    for (const pageId of pageIds) {
+    await runWithConcurrency(pageIds, 3, async (pageId) => {
       try {
         if (mode === "archive") {
           await archivePage(pageId, notionToken);
@@ -46,14 +61,13 @@ export async function POST(request: Request) {
         });
         errors++;
       }
-    }
+    });
 
     return new Response(
       JSON.stringify({ actioned, errors, mode, details }),
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error deduplicating pages:", error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Failed to deduplicate pages",

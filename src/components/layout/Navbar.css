@@ -34,6 +34,34 @@
   opacity: 0.7;
 }
 
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+  margin-left: 1.5rem;
+}
+
+.nav-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: 0.25rem 0.625rem;
+  border-radius: 4px;
+  transition: color 0.1s, background-color 0.1s;
+}
+
+.nav-link:hover {
+  color: var(--color-text);
+  background: rgba(0, 0, 0, 0.05);
+  text-decoration: none;
+}
+
+[data-theme="dark"] .nav-link:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
 .nav-top-right {
   display: flex;
   align-items: center;

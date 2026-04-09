@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import ThemeSettingsModal from "@/components/theme/ThemeSettingsModal";
 import CookieSettingsModal from "@/components/cookies/CookieSettingsModal";
+import DedupProgressBottomSheet from "@/components/DedupProgressBottomSheet";
 import "./Footer.css";
 
 interface FooterProps {
@@ -18,7 +19,7 @@ export default function Footer({ copyrightStart = 2024 }: FooterProps) {
     <footer className="footer">
       <div className="footer-inner">
         <span className="footer-copy">
-          © {copyrightStart} Notion Deduplicate
+          © {copyrightStart} notion-tools
         </span>
 
         <div className="footer-controls">
@@ -85,6 +86,7 @@ export default function Footer({ copyrightStart = 2024 }: FooterProps) {
         onClose={() => setShowCookies(false)}
         onSave={() => setShowCookies(false)}
       />
+      <DedupProgressBottomSheet />
     </footer>
   );
 }

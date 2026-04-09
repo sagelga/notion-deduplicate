@@ -1,18 +1,31 @@
 import type { Metadata } from "next";
+import Script from "next/script";
+import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { DedupProvider } from "@/hooks/useDedup";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CookieConsentBanner from "@/components/cookies/CookieConsentBanner";
 import { NavItem } from "@/types";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Notion Deduplicate",
-  description: "Find and delete duplicate Notion pages",
+  title: "notion-tools",
+  description: "A growing collection of tools to help you work smarter in Notion",
 };
 
 const NAV_LINKS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard" },
+  { label: "Duplicate", href: "/duplicate" },
+  { label: "Course", href: "/course" },
+  { label: "Blog", href: "/blog" },
+  { label: "Marketplace", href: "/marketplace" },
 ];
 
 export default function RootLayout({
@@ -22,12 +35,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <style>{`body { --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif; }`}</style>
-        <script
+      <body className={inter.variable}>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               try {
@@ -41,21 +52,20 @@ export default function RootLayout({
             `,
           }}
         />
-      </head>
-      <body>
         <ThemeProvider>
-          <Navbar
-            brandName="Notion Deduplicate"
-            navbarBg="#4f46e5"
-            links={NAV_LINKS}
-          />
-          <main className="page-content">
-            {children}
-          </main>
-          <Footer
-            copyrightStart={2025}
-          />
-          <CookieConsentBanner />
+          <DedupProvider>
+            <Navbar
+              brandName="notion-tools"
+              links={NAV_LINKS}
+            />
+            <main className="page-content">
+              {children}
+            </main>
+            <Footer
+              copyrightStart={2025}
+            />
+            <CookieConsentBanner />
+          </DedupProvider>
         </ThemeProvider>
       </body>
     </html>

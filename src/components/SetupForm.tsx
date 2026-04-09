@@ -48,13 +48,23 @@ export default function SetupForm() {
 
       {error && <p className="setup-error">{error}</p>}
 
-      <p className="setup-hint">
-        Create an integration at{" "}
-        <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer">
-          notion.so/my-integrations
-        </a>{" "}
-        and copy the Internal Integration Token.
-      </p>
+      <ol className="setup-hint setup-steps">
+        <li>
+          Go to{" "}
+          <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer">
+            notion.so/my-integrations
+          </a>{" "}
+          → click <strong>New integration</strong> → give it any name.
+        </li>
+        <li>
+          Copy the <strong>Internal Integration Token</strong> (<code>secret_…</code> or <code>ntn_…</code>).
+        </li>
+        <li className="setup-steps-critical">
+          In Notion, open each database → click <strong>···</strong> (top-right) →{" "}
+          <strong>Connections</strong> → add your integration.{" "}
+          Without this step, the database list will be empty.
+        </li>
+      </ol>
 
       <button type="submit" disabled={loading} className="setup-submit-btn">
         {loading ? "Connecting…" : "Connect"}

@@ -1,0 +1,374 @@
+/* ──────────────────────────────────────────────────────────────
+   DedupProgressBottomSheet — collapsed bar + expanded sheet
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Collapsed progress bar ── */
+.dedup-progress-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1500;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-rim);
+  cursor: pointer;
+  animation: dedup-slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes dedup-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.dedup-progress-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 1rem;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.dedup-progress-text {
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dedup-mini-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-rim);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: dedup-spin 0.7s linear infinite;
+}
+
+.dedup-paused-icon,
+.dedup-error-icon,
+.dedup-done-icon {
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.dedup-progress-bar-bg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-rim);
+  overflow: hidden;
+}
+
+.dedup-progress-fill {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 0.3s ease;
+}
+
+/* ── Expanded bottom sheet overlay ── */
+.dedup-bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+  animation: bs-fade-in 0.2s ease-out;
+}
+
+.dedup-bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-rim);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  animation: bs-slide-up 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@keyframes bs-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bs-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes dedup-spin {
+  to { transform: rotate(360deg); }
+}
+
+.dedup-sheet-drag-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--color-rim);
+  border-radius: 2px;
+  margin: 0.75rem auto 0;
+}
+
+.dedup-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-rim);
+}
+
+.dedup-sheet-header h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.dedup-sheet-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-muted);
+  padding: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.dedup-sheet-close:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.dedup-sheet-body {
+  padding: 1rem 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Info section ── */
+.dedup-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.dedup-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+}
+
+.dedup-info-label {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+}
+
+/* ── Stats grid ── */
+.dedup-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.625rem;
+}
+
+.dedup-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.625rem 0.5rem;
+  background: var(--color-surface);
+  border-radius: 8px;
+  border: 1px solid var(--color-rim);
+}
+
+.dedup-stat-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.dedup-stat-value.stat-success {
+  color: #16a34a;
+}
+
+.dedup-stat-value.stat-error {
+  color: #dc2626;
+}
+
+[data-theme="dark"] .dedup-stat-value.stat-success {
+  color: #4ade80;
+}
+
+[data-theme="dark"] .dedup-stat-value.stat-error {
+  color: #f87171;
+}
+
+.dedup-stat-label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Progress bar full ── */
+.dedup-progress-track {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.dedup-progress-bar-full {
+  flex: 1;
+  height: 6px;
+  background: var(--color-rim);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.dedup-progress-fill-full {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.dedup-progress-pct {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+/* ── Status row ── */
+.dedup-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  padding: 0.5rem 0;
+}
+
+.dedup-spinner-sm {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-rim);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: dedup-spin 0.7s linear infinite;
+}
+
+.dedup-status-paused {
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+.dedup-status-done {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .dedup-status-done {
+  color: #4ade80;
+}
+
+.dedup-status-error {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .dedup-status-error {
+  color: #f87171;
+}
+
+/* ── Actions ── */
+.dedup-actions {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-rim);
+}
+
+.dedup-action-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dedup-action-btn--pause {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-rim);
+}
+
+.dedup-action-btn--pause:hover {
+  background: var(--color-rim);
+}
+
+.dedup-action-btn--go {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  flex: 1;
+}
+
+.dedup-action-btn--go:hover {
+  background: var(--color-accent-hover);
+}
+
+.dedup-action-btn--dismiss {
+  background: transparent;
+  color: var(--color-muted);
+  border: 1px solid var(--color-rim);
+}
+
+.dedup-action-btn--dismiss:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-secondary);
+}
+
+/* ── Responsive ── */
+@media (max-width: 520px) {
+  .dedup-bottom-sheet {
+    max-width: 100%;
+  }
+
+  .dedup-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dedup-sheet-body {
+    padding: 0.75rem 1rem 1.25rem;
+  }
+}

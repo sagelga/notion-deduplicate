@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NotionProperty, type NotionDatabase } from "@/lib/notion";
 import DeduplicateView from "./DeduplicateView";
 import AutoDeduplicateView from "./AutoDeduplicateView";
@@ -41,6 +41,7 @@ export default function DatabaseSelector({
   const [dedupeMode, setDedupeMode] = useState<"review" | "auto" | null>(null);
   const [autoActionMode, setAutoActionMode] = useState<"archive" | "delete">("archive");
   const [autoStarted, setAutoStarted] = useState(false);
+  const [dryRunConfirmed, setDryRunConfirmed] = useState(false);
   const [skipEmpty, setSkipEmpty] = useState(true);
 
   // Preview state — first 50 rows shown at the bottom
@@ -51,15 +52,24 @@ export default function DatabaseSelector({
 
   const PREVIEW_PAGE_SIZE = 20;
 
+  // Refs for batching page accumulation to avoid O(n²) array spreads
+  const pagesAccRef = useRef<Page[]>([]);
+  const rafRef = useRef<number | null>(null);
+
   const loadPages = async (databaseId: string, propertyName: string) => {
     setSelectedProperty(propertyName);
     setPages([]);
     setPagesLoaded(0);
     setError("");
     setPagesLoading(true);
+    pagesAccRef.current = [];
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
 
     try {
-      const response = await fetch(`/api/databases/${databaseId}/pages`);
+      const response = await fetch(`/api/databases/${databaseId}/pages?fields=${encodeURIComponent(propertyName)}`);
 
       if (!response.ok || !response.body) {
         throw new Error("Failed to fetch pages");
@@ -88,9 +98,20 @@ export default function DatabaseSelector({
           }
 
           if (msg.type === "batch" && msg.pages) {
-            setPages((prev) => [...prev, ...msg.pages!]);
-            setPagesLoaded((prev) => prev + msg.pages!.length);
+            pagesAccRef.current.push(...msg.pages!);
+            setPagesLoaded(pagesAccRef.current.length);
+            if (rafRef.current === null) {
+              rafRef.current = requestAnimationFrame(() => {
+                setPages([...pagesAccRef.current]);
+                rafRef.current = null;
+              });
+            }
           } else if (msg.type === "done") {
+            if (rafRef.current !== null) {
+              cancelAnimationFrame(rafRef.current);
+              rafRef.current = null;
+            }
+            setPages([...pagesAccRef.current]);
             setPagesLoading(false);
           } else if (msg.type === "error") {
             throw new Error(msg.message ?? "Unknown error");
@@ -98,6 +119,10 @@ export default function DatabaseSelector({
         }
       }
     } catch (err) {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
       setError(err instanceof Error ? err.message : "Failed to fetch pages");
       setPagesLoading(false);
     }
@@ -112,6 +137,7 @@ export default function DatabaseSelector({
     setError("");
     setDedupeMode(null);
     setAutoStarted(false);
+    setDryRunConfirmed(false);
     setPreviewPages([]);
     setPreviewHasMore(false);
     setPreviewPage(0);
@@ -169,6 +195,7 @@ export default function DatabaseSelector({
     setSelectedProperty(propertyName);
     setDedupeMode(null);
     setAutoStarted(false);
+    setDryRunConfirmed(false);
   };
 
   const isLoading = schemaLoading || pagesLoading;
@@ -183,13 +210,16 @@ export default function DatabaseSelector({
   }, [pagesLoading]);
 
   // Columns to show in the preview table: selected field first, then the rest
-  const previewColumns = properties
-    .filter((p) => DEDUPLICATABLE_TYPES.has(p.type))
-    .sort((a, b) => {
-      if (a.name === selectedProperty) return -1;
-      if (b.name === selectedProperty) return 1;
-      return 0;
-    });
+  const previewColumns = useMemo(() =>
+    properties
+      .filter((p) => DEDUPLICATABLE_TYPES.has(p.type))
+      .sort((a, b) => {
+        if (a.name === selectedProperty) return -1;
+        if (b.name === selectedProperty) return 1;
+        return 0;
+      }),
+    [properties, selectedProperty]
+  );
 
   return (
     <div className="db-selector">
@@ -259,14 +289,14 @@ export default function DatabaseSelector({
               className="db-mode-btn"
             >
               Scan &amp; Review
-              <span className="db-mode-hint">Load all pages first, then choose what to remove</span>
+              <span className="db-mode-hint">See all duplicates and decide what to keep before anything is removed</span>
             </button>
             <button
               onClick={() => setDedupeMode("auto")}
-              className="db-mode-btn db-mode-btn--auto"
+              className="db-mode-btn"
             >
               Auto-deduplicate
-              <span className="db-mode-hint">Stream through pages and remove duplicates immediately</span>
+              <span className="db-mode-hint">Remove duplicates automatically — no reviewing needed</span>
             </button>
           </div>
         </div>
@@ -310,14 +340,31 @@ export default function DatabaseSelector({
                   checked={autoActionMode === "delete"}
                   onChange={() => setAutoActionMode("delete")}
                 />
-                Permanently delete
+                Permanently delete <span className="dedup-mode-hint">(cannot be undone)</span>
               </label>
             </div>
+            {autoActionMode === "delete" && (
+              <p className="db-delete-warning">
+                Archive moves pages to Notion&rsquo;s trash — restorable for 30&nbsp;days.
+                Delete permanently removes them with no recovery.{" "}
+                <a
+                  href="https://www.notion.com/help/archive-or-delete-content"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="db-delete-warning-link"
+                >
+                  Learn more
+                </a>
+              </p>
+            )}
+            <p className="db-auto-confirm-note">
+              This will scan your database and show a preview before making any changes.
+            </p>
             <button
               onClick={() => setAutoStarted(true)}
               className="db-auto-start-btn"
             >
-              Start Auto-Deduplicate
+              Scan for Duplicates
             </button>
           </div>
         </div>
@@ -420,10 +467,17 @@ export default function DatabaseSelector({
       {/* Auto-deduplicate live view */}
       {selectedProperty && dedupeMode === "auto" && autoStarted && (
         <AutoDeduplicateView
+          key={dryRunConfirmed ? "real-run" : "dry-run"}
           databaseId={selectedDatabaseId}
+          databaseName={
+            databases.find((db) => db.id === selectedDatabaseId)?.title?.[0]?.plain_text ??
+            "Untitled database"
+          }
           fieldName={selectedProperty}
           mode={autoActionMode}
           skipEmpty={skipEmpty}
+          dryRun={!dryRunConfirmed}
+          onConfirm={() => setDryRunConfirmed(true)}
         />
       )}
     </div>

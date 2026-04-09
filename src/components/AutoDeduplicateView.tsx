@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDedup } from "@/hooks/useDedup";
 import "./AutoDeduplicateView.css";
 
 type Mode = "archive" | "delete";
-type PageStatus = "kept" | "archived" | "deleted" | "skipped" | "error";
+type PageStatus = "kept" | "archived" | "deleted" | "skipped" | "error" | "pending";
 
 interface PageRow {
   id: string;
@@ -20,7 +21,7 @@ interface Stats {
   errors: number;
 }
 
-type Phase = "running" | "done" | "error";
+type Phase = "running" | "paused" | "done" | "error" | "preview";
 
 const PAGE_SIZE = 20;
 
@@ -28,34 +29,65 @@ const STATUS_ORDER: Record<PageStatus, number> = {
   kept: 0,
   archived: 1,
   deleted: 1,
+  pending: 1,
   error: 2,
   skipped: 3,
 };
 
+function notionPageUrl(id: string) {
+  return `https://www.notion.so/${id.replace(/-/g, "")}`;
+}
+
 export default function AutoDeduplicateView({
   databaseId,
+  databaseName,
   fieldName,
   mode,
   skipEmpty,
+  dryRun = false,
+  onConfirm,
 }: {
   databaseId: string;
+  databaseName: string;
   fieldName: string;
   mode: Mode;
   skipEmpty: boolean;
+  dryRun?: boolean;
+  onConfirm?: () => void;
 }) {
-  const [phase, setPhase] = useState<Phase>("running");
+  const dedup = useDedup();
+  const [phase, setLocalPhase] = useState<Phase>("running");
   const [stats, setStats] = useState<Stats>({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0 });
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [tablePage, setTablePage] = useState(0);
 
   // pageMap: id → PageRow — use a ref so stream handler always sees latest
   const pageMapRef = useRef<Map<string, PageRow>>(new Map());
-  // Sorted array for display — derived state, rebuilt on each render tick
   const [rows, setRows] = useState<PageRow[]>([]);
+
+  // Register with context on mount
+  useEffect(() => {
+    dedup.startDedup({ databaseId, databaseName, fieldName, mode });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [databaseId, databaseName, fieldName, mode]);
+
+  // Control ref for pause — share with context
+  const localPausedRef = useRef(false);
+
+  // Sync context pausedRef with local
+  useEffect(() => {
+    dedup.pausedRef.current = localPausedRef.current;
+  });
 
   const updateRows = () => {
     const sorted = Array.from(pageMapRef.current.values()).sort((a, b) => {
-      const fv = a.fieldValue.localeCompare(b.fieldValue);
+      // Empty values sort last
+      const aEmpty = a.fieldValue === "(empty)";
+      const bEmpty = b.fieldValue === "(empty)";
+      if (aEmpty && !bEmpty) return 1;
+      if (!aEmpty && bEmpty) return -1;
+
+      const fv = a.fieldValue < b.fieldValue ? -1 : a.fieldValue > b.fieldValue ? 1 : 0;
       if (fv !== 0) return fv;
       return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
     });
@@ -65,7 +97,8 @@ export default function AutoDeduplicateView({
   useEffect(() => {
     const url =
       `/api/deduplicate/auto?databaseId=${encodeURIComponent(databaseId)}` +
-      `&field=${encodeURIComponent(fieldName)}&mode=${mode}&skipEmpty=${skipEmpty}`;
+      `&field=${encodeURIComponent(fieldName)}&mode=${mode}&skipEmpty=${skipEmpty}` +
+      (dryRun ? `&dryRun=true` : "");
     let cancelled = false;
 
     (async () => {
@@ -85,9 +118,22 @@ export default function AutoDeduplicateView({
           }
         };
 
+        // Batch DOM updates at 300ms — decouples render frequency from stream
+        // speed, keeping the browser responsive for large databases.
+        const flushInterval = setInterval(flush, 300);
+
         while (true) {
+          if (cancelled) { flush(); clearInterval(flushInterval); break; }
+
+          // Handle pause by waiting
+          while (localPausedRef.current && !cancelled) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+
+          if (cancelled) { flush(); clearInterval(flushInterval); break; }
+
           const { done, value } = await reader.read();
-          if (done || cancelled) { flush(); break; }
+          if (done) { flush(); clearInterval(flushInterval); break; }
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
@@ -107,39 +153,73 @@ export default function AutoDeduplicateView({
               };
               pageMapRef.current.set(row.id, row);
               batchDirty = true;
-            } else if (msg.type === "progress" || msg.type === "actioned" || msg.type === "actionError") {
-              setStats({
+            } else if (msg.type === "progress") {
+              // matchWorker owns scanned + duplicatesFound; also carries latest actioned/errors
+              const newStats = {
                 scanned: (msg.scanned as number) ?? 0,
                 duplicatesFound: (msg.duplicatesFound as number) ?? 0,
                 actioned: (msg.actioned as number) ?? 0,
                 errors: (msg.errors as number) ?? 0,
-              });
-              flush();
+              };
+              setStats(newStats);
+              dedup.updateStats(newStats);
+            } else if (msg.type === "actioned" || msg.type === "actionError") {
+              // deleteWorker owns actioned + errors; scanned/duplicatesFound in these
+              // events can lag matchWorker — only update the delete-stage counters.
+              // dedup context gets the full authoritative update from the next progress event.
+              setStats((prev) => ({
+                ...prev,
+                actioned: (msg.actioned as number) ?? prev.actioned,
+                errors: (msg.errors as number) ?? prev.errors,
+              }));
             } else if (msg.type === "done") {
-              setStats({
+              const newStats = {
                 scanned: (msg.scanned as number) ?? 0,
                 duplicatesFound: (msg.duplicatesFound as number) ?? 0,
                 actioned: (msg.actioned as number) ?? 0,
                 errors: (msg.errors as number) ?? 0,
-              });
+              };
+              setStats(newStats);
+              dedup.updateStats(newStats);
               flush();
-              setPhase("done");
+              if (dryRun) {
+                setLocalPhase("preview");
+                // Don't call dedup.setPhase("done") yet — run isn't actually complete
+              } else {
+                setLocalPhase("done");
+                dedup.setPhase("done");
+              }
             } else if (msg.type === "error") {
-              setErrorMessage((msg.message as string) ?? "Unknown error");
-              setPhase("error");
+              const errMsg = (msg.message as string) ?? "Unknown error";
+              setErrorMessage(errMsg);
+              flush();
+              setLocalPhase("error");
+              dedup.setErrorMessage(errMsg);
             }
           }
         }
       } catch (err) {
         if (!cancelled) {
-          setErrorMessage(err instanceof Error ? err.message : "Unknown error");
-          setPhase("error");
+          const errMsg = err instanceof Error ? err.message : "Unknown error";
+          setErrorMessage(errMsg);
+          setLocalPhase("error");
+          dedup.setErrorMessage(errMsg);
         }
       }
     })();
 
-    return () => { cancelled = true; };
-  }, [databaseId, fieldName, mode, skipEmpty]);
+    return () => {
+      cancelled = true;
+      localPausedRef.current = false;
+    };
+  }, [databaseId, fieldName, mode, skipEmpty, dryRun, dedup]);
+
+  const handlePause = () => {
+    localPausedRef.current = !localPausedRef.current;
+    dedup.pausedRef.current = localPausedRef.current;
+    setLocalPhase(localPausedRef.current ? "paused" : "running");
+    dedup.setPhase(localPausedRef.current ? "paused" : "running");
+  };
 
   const verb = mode === "archive" ? "archived" : "deleted";
 
@@ -168,16 +248,30 @@ export default function AutoDeduplicateView({
           </span>
           <span className="auto-stat-label">{verb}</span>
         </div>
-        {stats.errors > 0 && (
-          <div className="auto-dedup-stat">
-            <span className="auto-stat-value val-error">{stats.errors}</span>
-            <span className="auto-stat-label">errors</span>
+        <div className="auto-dedup-stat">
+          <span className={`auto-stat-value ${stats.errors > 0 ? "val-error" : ""}`}>
+            {stats.errors}
+          </span>
+          <span className="auto-stat-label">errors</span>
+        </div>
+
+        {/* Spinner + pause inline */}
+        {(phase === "running" || phase === "paused") && (
+          <div className="auto-spinner-group">
+            {phase === "running" && <div className="auto-spinner" />}
+            <button onClick={handlePause} className="auto-pause-btn">
+              {phase === "paused" ? "Resume" : "Pause"}
+            </button>
           </div>
         )}
-        {phase === "running" && <div className="db-spinner auto-spinner" />}
       </div>
 
       {phase === "error" && <div className="auto-dedup-error">{errorMessage}</div>}
+      {phase === "paused" && (
+        <div className="auto-dedup-paused">
+          Paused — {stats.scanned} scanned, {stats.actioned} {verb}.
+        </div>
+      )}
       {phase === "done" && (
         <div className="auto-dedup-done">
           Done — {stats.actioned} pages {verb}, {stats.scanned} total scanned.
@@ -205,7 +299,16 @@ export default function AutoDeduplicateView({
                       </span>
                     </td>
                     <td className="auto-cell-field">{row.fieldValue}</td>
-                    <td className="auto-cell-title">{row.title}</td>
+                    <td className="auto-cell-title">
+                      <a
+                        href={notionPageUrl(row.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="auto-page-link"
+                      >
+                        {row.title}
+                      </a>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -235,8 +338,32 @@ export default function AutoDeduplicateView({
         </div>
       )}
 
-      {(phase === "done" || phase === "error") && (
-        <a href="/dashboard" className="auto-dedup-back">Back to Dashboard</a>
+      {phase === "preview" && (
+        <div className="auto-dedup-preview">
+          <p className="auto-preview-summary">
+            Scan complete — found <strong>{stats.duplicatesFound}</strong> duplicate
+            {stats.duplicatesFound !== 1 ? "s" : ""} across <strong>{stats.scanned}</strong> pages.
+            {stats.duplicatesFound > 0
+              ? ` ${stats.duplicatesFound} page${stats.duplicatesFound !== 1 ? "s" : ""} will be ${mode === "archive" ? "archived" : "permanently deleted"}.`
+              : " No action needed."}
+          </p>
+          {stats.duplicatesFound > 0 && (
+            <button
+              className={`auto-confirm-btn${mode === "delete" ? " auto-confirm-btn--danger" : ""}`}
+              onClick={onConfirm}
+            >
+              Confirm &amp; {mode === "archive" ? "Archive" : "Delete"} {stats.duplicatesFound} page
+              {stats.duplicatesFound !== 1 ? "s" : ""}
+            </button>
+          )}
+          {stats.duplicatesFound === 0 && (
+            <a href="/duplicate" className="auto-dedup-back">Back to Duplicate</a>
+          )}
+        </div>
+      )}
+
+      {(phase === "done" || phase === "error" || phase === "paused") && (
+        <a href="/duplicate" className="auto-dedup-back">Back to Duplicate</a>
       )}
     </div>
   );

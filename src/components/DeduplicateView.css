@@ -348,3 +348,26 @@
   color: var(--color-accent-hover);
   text-decoration: underline;
 }
+
+/* Delete warning callout */
+.dedup-delete-warning {
+  font-size: 0.8125rem;
+  color: #eb5757;
+  background: rgba(235, 87, 87, 0.08);
+  border: 1px solid rgba(235, 87, 87, 0.2);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+  flex: 1 1 100%;
+  line-height: 1.5;
+}
+
+.dedup-delete-warning-link {
+  color: inherit;
+  text-decoration: underline;
+  transition: opacity 0.1s;
+}
+
+.dedup-delete-warning-link:hover {
+  opacity: 0.7;
+}

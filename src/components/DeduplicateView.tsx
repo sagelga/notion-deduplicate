@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./DeduplicateView.css";
 
 interface Page {
@@ -41,6 +41,12 @@ export default function DeduplicateView({
   const [result, setResult] = useState<{ actioned: number; errors: number; mode: Mode } | null>(null);
   const [groupPage, setGroupPage] = useState(0);
 
+  // Incremental grouping: persistent ref stores groups, only add new pages
+  const groupsMapRef = useRef<Map<string, Page[]>>(new Map());
+  const processedCountRef = useRef(0);
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
+  const rebuildTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!acting) return;
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
@@ -48,23 +54,40 @@ export default function DeduplicateView({
     return () => window.removeEventListener("beforeunload", handler);
   }, [acting]);
 
-  const duplicateGroups = useMemo<DuplicateGroup[]>(() => {
-    const groups = new Map<string, Page[]>();
-    for (const page of pages) {
-      const value = page.properties[fieldName] ?? "(empty)";
-      if (skipEmpty && (value === "(empty)" || value === null)) continue;
-      if (!groups.has(value)) groups.set(value, []);
-      groups.get(value)!.push(page);
-    }
-    return Array.from(groups.entries())
+  // Reset groups when field or skipEmpty changes
+  useEffect(() => {
+    groupsMapRef.current = new Map();
+    processedCountRef.current = 0;
+    setDuplicateGroups([]);
+  }, [fieldName, skipEmpty]);
+
+  // Rebuild duplicate groups from the map (debounced)
+  const rebuildGroups = () => {
+    const groups = Array.from(groupsMapRef.current.entries())
       .filter(([, g]) => g.length > 1)
       .map(([value, g]) => ({
         value,
-        pages: [...g].sort(
-          (a, b) => new Date(a.created_time).getTime() - new Date(b.created_time).getTime()
-        ),
+        pages: [...g].sort((a, b) => (a.created_time < b.created_time ? -1 : 1)),
       }))
       .sort((a, b) => b.pages.length - a.pages.length);
+    setDuplicateGroups(groups);
+  };
+
+  // Incremental insert of new pages into groups
+  useEffect(() => {
+    const map = groupsMapRef.current;
+    const newPages = pages.slice(processedCountRef.current);
+    processedCountRef.current = pages.length;
+
+    for (const page of newPages) {
+      const value = page.properties[fieldName] ?? "(empty)";
+      if (skipEmpty && (value === "(empty)" || value === null)) continue;
+      if (!map.has(value)) map.set(value, []);
+      map.get(value)!.push(page);
+    }
+
+    if (rebuildTimerRef.current) clearTimeout(rebuildTimerRef.current);
+    rebuildTimerRef.current = setTimeout(rebuildGroups, 300);
   }, [pages, fieldName, skipEmpty]);
 
   // Auto-jump to last page while scanning so user sees incoming duplicates
@@ -83,12 +106,12 @@ export default function DeduplicateView({
   const effectiveKeepId = (group: DuplicateGroup) =>
     keepSelections.get(group.value) ?? group.pages[0].id;
 
-  const pageIdsToAction = duplicateGroups.flatMap((group) => {
-    const keepId = effectiveKeepId(group);
+  const pageIdsToAction = useMemo(() => duplicateGroups.flatMap((group) => {
+    const keepId = keepSelections.get(group.value) ?? group.pages[0].id;
     return group.pages
       .filter((p) => p.id !== keepId && !excludedIds.has(p.id))
       .map((p) => p.id);
-  });
+  }), [duplicateGroups, keepSelections, excludedIds]);
 
   const handleKeepChange = (group: DuplicateGroup, pageId: string) => {
     setKeepSelections((prev) => new Map(prev).set(group.value, pageId));
@@ -141,7 +164,7 @@ export default function DeduplicateView({
             </p>
           )}
         </div>
-        <a href="/dashboard" className="dedup-result-back">Back to Dashboard</a>
+        <a href="/duplicate" className="dedup-result-back">Back to Duplicate</a>
       </div>
     );
   }
@@ -290,10 +313,23 @@ export default function DeduplicateView({
               checked={mode === "delete"}
               onChange={() => setMode("delete")}
             />
-            Permanently delete
-
+            Permanently delete <span className="dedup-mode-hint">(cannot be undone)</span>
           </label>
         </div>
+        {mode === "delete" && (
+          <p className="dedup-delete-warning">
+            Archive moves pages to Notion&rsquo;s trash — restorable for 30&nbsp;days.
+            Delete permanently removes them with no recovery.{" "}
+            <a
+              href="https://www.notion.com/help/archive-or-delete-content"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="dedup-delete-warning-link"
+            >
+              Learn more
+            </a>
+          </p>
+        )}
         <button
           onClick={handleAction}
           disabled={acting || pageIdsToAction.length === 0}

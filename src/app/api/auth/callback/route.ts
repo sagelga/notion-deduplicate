@@ -67,5 +67,5 @@ export async function GET(request: Request) {
     path: "/",
   });
 
-  redirect("/dashboard");
+  redirect("/duplicate");
 }

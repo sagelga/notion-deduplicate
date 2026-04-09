@@ -10,7 +10,7 @@ async function getDatabases(token: string): Promise<NotionDatabase[]> {
   return listDatabases(token);
 }
 
-export default async function Dashboard() {
+export default async function DuplicatePage() {
   const cookieStore = await cookies();
   const notionToken = cookieStore.get("notion_token")?.value;
 
@@ -47,7 +47,7 @@ export default async function Dashboard() {
     <div className="dashboard-wrapper">
       <div className="dashboard-header">
         <div>
-          <h1 className="dashboard-title">Dashboard</h1>
+          <h1 className="dashboard-title">Duplicate</h1>
           <p className="dashboard-subtitle">Select a database and a field to find and remove duplicates</p>
         </div>
         <form action="/api/auth/logout" method="POST">

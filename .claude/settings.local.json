@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Cloudflare_Developer_Platform__accounts_list",
+      "Bash(npx wrangler:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npx @cloudflare/next-on-pages)",
+      "Bash(npx tsc:*)",
+      "WebSearch",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:dataclean.to)",
+      "WebFetch(domain:n8n.io)",
+      "WebFetch(domain:help.notion-automations.com)",
+      "WebFetch(domain:matt.fyi)",
+      "WebFetch(domain:help.2sync.com)",
+      "WebFetch(domain:2sync.com)",
+      "WebFetch(domain:exnota.com)",
+      "WebFetch(domain:growwstacks.com)",
+      "WebFetch(domain:notionanswers.com)",
+      "WebFetch(domain:templatesfornotion.com)",
+      "Bash(git:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.notion.com)",
+      "WebFetch(domain:dedupe.ly)",
+      "WebFetch(domain:www.ayn8n.com)",
+      "WebFetch(domain:latwy.co)",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-update-page"
+    ]
+  }
+}

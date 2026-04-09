@@ -10,9 +10,7 @@ interface NavbarProps {
   brandName: string;
   /** Where the brand logo links to (default: "/") */
   brandHref?: string;
-  /** CSS color value for the navbar background (currently unused, kept for backward compatibility) */
-  navbarBg?: string;
-  /** Navigation items (currently unused, kept for backward compatibility) */
+  /** Navigation items */
   links?: NavItem[];
   /** Optional slot for extra controls in the top-right (e.g. search, user avatar) */
   controls?: React.ReactNode;
@@ -21,6 +19,7 @@ interface NavbarProps {
 export default function Navbar({
   brandName,
   brandHref = "/",
+  links,
   controls,
 }: NavbarProps) {
 
@@ -30,6 +29,15 @@ export default function Navbar({
         <Link href={brandHref} className="nav-logo-text">
           {brandName}
         </Link>
+        {links && links.length > 0 && (
+          <div className="nav-links">
+            {links.map((link) => (
+              <Link key={link.href} href={link.href} className="nav-link">
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        )}
         {controls && <div className="nav-top-right">{controls}</div>}
       </div>
     </nav>

@@ -4,10 +4,14 @@ import { getDatabaseSchema, getPropertyValue, paginateDatabase } from "@/lib/not
 export const runtime = 'edge';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: databaseId } = await params;
+  const url = new URL(request.url);
+  const fieldsParam = url.searchParams.get("fields");
+  const requestedFields = fieldsParam ? new Set(fieldsParam.split(",")) : null;
+
   const cookieStore = await cookies();
   const notionToken = cookieStore.get("notion_token")?.value;
 
@@ -30,6 +34,7 @@ export async function GET(
         const propertyTypeMap = Object.fromEntries(
           schema.map((p) => [p.name, p.type])
         );
+        const titlePropName = schema.find((p) => p.type === "title")?.name;
 
         send({ type: "schema", propertyTypeMap });
 
@@ -38,17 +43,18 @@ export async function GET(
         for await (const batch of paginateDatabase(databaseId, notionToken)) {
           const pages = batch.map((page) => {
             let title = "(Untitled)";
-            const titleEntry = Object.entries(page.properties || {}).find(
-              ([, prop]) => prop.type === "title"
-            );
-            if (titleEntry) {
-              title = titleEntry[1].title?.[0]?.plain_text ?? "(Untitled)";
+            if (titlePropName) {
+              const titleProp = page.properties[titlePropName];
+              if (titleProp && "title" in titleProp) {
+                title = titleProp.title?.[0]?.plain_text ?? "(Untitled)";
+              }
             }
 
             const properties: Record<string, string | null> = {};
             for (const [propName, propValue] of Object.entries(
               page.properties || {}
             )) {
+              if (requestedFields && !requestedFields.has(propName)) continue;
               properties[propName] = getPropertyValue(
                 propValue,
                 propertyTypeMap[propName] ?? "unknown"

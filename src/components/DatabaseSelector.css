@@ -337,3 +337,32 @@
   font-size: 0.8125rem;
   color: var(--color-muted);
 }
+
+/* Delete warning callout */
+.db-delete-warning {
+  font-size: 0.8125rem;
+  color: #eb5757;
+  background: rgba(235, 87, 87, 0.08);
+  border: 1px solid rgba(235, 87, 87, 0.2);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.db-delete-warning-link {
+  color: inherit;
+  text-decoration: underline;
+  transition: opacity 0.1s;
+}
+
+.db-delete-warning-link:hover {
+  opacity: 0.7;
+}
+
+/* Auto confirm note */
+.db-auto-confirm-note {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  margin: 0;
+}
