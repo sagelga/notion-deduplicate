@@ -179,10 +179,11 @@ export default function DeduplicateView({
                     {group.pages.map((page) => {
                       const isKept = page.id === keepId;
                       const isExcluded = excludedIds.has(page.id);
+                      const userSelected = keepSelections.has(group.value);
                       return (
                         <tr
                           key={page.id}
-                          className={isKept ? "dedup-row-keep" : "dedup-row-delete"}
+                          className={userSelected ? (isKept ? "dedup-row-keep" : "dedup-row-delete") : ""}
                         >
                           <td>{page.title}</td>
                           <td className="mono">
