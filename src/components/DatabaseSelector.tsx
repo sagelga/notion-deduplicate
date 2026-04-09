@@ -239,7 +239,7 @@ export default function DatabaseSelector({
   const propertyOptions: CustomDropdownOption[] = properties.map((prop) => ({
     value: prop.name,
     label: prop.name,
-    description: `(${prop.type})`,
+    description: prop.type,
   }));
 
   const actionModeOptions: CustomDropdownOption[] = [
