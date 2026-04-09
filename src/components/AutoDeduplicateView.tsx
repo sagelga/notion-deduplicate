@@ -139,11 +139,13 @@ export default function AutoDeduplicateView({
     }
   }, [phase, showLogs]);
 
-  // Register with context on mount
+  // Register with context on mount — only for real runs, not dry-run preview scans
   useEffect(() => {
-    dedup.startDedup({ databaseId, databaseName, fieldName, mode });
+    if (!dryRun) {
+      dedup.startDedup({ databaseId, databaseName, fieldName, mode });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [databaseId, databaseName, fieldName, mode]);
+  }, [databaseId, databaseName, fieldName, mode, dryRun]);
 
   // Control ref for pause — share with context
   const localPausedRef = useRef(false);
