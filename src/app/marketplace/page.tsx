@@ -1,3 +1,18 @@
+// page.tsx — Marketplace page (/marketplace)
+//
+// Client component that renders a browsable gallery of free Notion templates.
+// Template data is static (hardcoded in TEMPLATES below) — there is no backend
+// or CMS powering this page yet.
+//
+// UI features:
+//   - Full-text search across template name and description
+//   - Category filter ("All", "Productivity", "Knowledge", "Work")
+//   - Sort by featured, trending, alphabetical, or category
+//   - Featured section shown only when no filters are active (default view)
+//
+// The filtered/sorted list is computed with useMemo so it only recalculates
+// when the search, category, or sort state changes — not on every render.
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -82,9 +97,11 @@ export default function MarketplacePage() {
   const [sort, setSort] = useState("featured");
 
   const filtered = useMemo(() => {
+    // Start with a shallow copy so the sort (which mutates in place) doesn't
+    // affect the original TEMPLATES array.
     let result = [...TEMPLATES];
 
-    // Search filter
+    // Search filter — case-insensitive match against name and description.
     if (search.trim()) {
       const query = search.toLowerCase();
       result = result.filter(
@@ -94,12 +111,13 @@ export default function MarketplacePage() {
       );
     }
 
-    // Category filter
+    // Category filter — "All" is the sentinel value meaning no filter applied.
     if (category !== "All") {
       result = result.filter((t) => t.category === category);
     }
 
-    // Sort
+    // Sort — boolean flags are converted to 0/1 so subtraction gives a
+    // stable numeric comparator (true items sort first).
     switch (sort) {
       case "featured":
         result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
@@ -118,6 +136,8 @@ export default function MarketplacePage() {
     return result;
   }, [search, category, sort]);
 
+  // Derived from the full TEMPLATES list (not filtered) so the featured section
+  // always shows the same items regardless of the active search/category filter.
   const featuredItems = TEMPLATES.filter((t) => t.featured);
 
   return (
@@ -171,7 +191,8 @@ export default function MarketplacePage() {
         </div>
       </div>
 
-      {/* Featured section */}
+      {/* Featured section — only shown when the user hasn't applied any filters,
+          to avoid it competing with the filtered results grid. */}
       {!search && category === "All" && sort === "featured" && (
         <div className="mkt-featured">
           <h2 className="mkt-section-label">✨ Featured Templates</h2>

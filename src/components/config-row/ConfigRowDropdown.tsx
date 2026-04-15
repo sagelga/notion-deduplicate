@@ -1,30 +1,42 @@
+// ConfigRowDropdown.tsx
+//
+// Accessible custom dropdown replacing native <select> elements throughout the
+// config row. It supports an optional per-option description line, disabled
+// options, and an "inline" layout variant (used inside the sentence-style
+// ConfigRow where the trigger sits flush within a text sentence).
+//
+// Click-outside detection is set up only when the menu is open (avoids attaching
+// a document listener permanently) and is cleaned up in the useEffect return.
+// The disabled prop on individual options prevents selection but still renders
+// the option visibly in the menu so users can see all choices.
+
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import "./CustomDropdown.css";
+import "./ConfigRowDropdown.css";
 
-export interface CustomDropdownOption {
+export interface ConfigRowDropdownOption {
   value: string;
   label: string;
   description?: string;
   disabled?: boolean;
 }
 
-interface CustomDropdownProps {
+interface ConfigRowDropdownProps {
   value: string;
   onChange: (value: string) => void;
-  options: CustomDropdownOption[];
+  options: ConfigRowDropdownOption[];
   disabled?: boolean;
   inline?: boolean;
 }
 
-export function CustomDropdown({
+export function ConfigRowDropdown({
   value,
   onChange,
   options,
   disabled = false,
   inline = false,
-}: CustomDropdownProps) {
+}: ConfigRowDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -48,24 +60,23 @@ export function CustomDropdown({
   return (
     <div
       ref={containerRef}
-      className={`custom-dropdown ${inline ? "custom-dropdown--inline" : ""}`}
+      className={`config-row-dropdown ${inline ? "config-row-dropdown--inline" : ""}`}
     >
       <button
-        className="custom-dropdown-trigger"
+        className="config-row-dropdown-trigger"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         type="button"
       >
-        <span className="custom-dropdown-label">{displayLabel}</span>
-        <span className="custom-dropdown-arrow">{isOpen ? "▾" : "▸"}</span>
+        <span className="config-row-dropdown-label">{displayLabel}</span>
       </button>
 
       {isOpen && !disabled && (
-        <div className="custom-dropdown-menu">
+        <div className="config-row-dropdown-menu">
           {options.map((opt) => (
             <button
               key={opt.value}
-              className={`custom-dropdown-option${opt.disabled ? " custom-dropdown-option--disabled" : ""}${opt.value === value ? " custom-dropdown-option--active" : ""}`}
+              className={`config-row-dropdown-option${opt.disabled ? " config-row-dropdown-option--disabled" : ""}${opt.value === value ? " config-row-dropdown-option--active" : ""}`}
               onClick={() => {
                 if (!opt.disabled) {
                   onChange(opt.value);
@@ -75,9 +86,9 @@ export function CustomDropdown({
               disabled={opt.disabled}
               type="button"
             >
-              <span className="custom-dropdown-option-label">{opt.label}</span>
+              <span className="config-row-dropdown-option-label">{opt.label}</span>
               {opt.description && (
-                <span className="custom-dropdown-option-desc">{opt.description}</span>
+                <span className="config-row-dropdown-option-desc">{opt.description}</span>
               )}
             </button>
           ))}

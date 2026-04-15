@@ -1,7 +1,23 @@
+/* ──────────────────────────────────────────────────────────────
+   duplicate/page.css — Deduplicate dashboard page
+   Purpose: Outer layout for the /duplicate route, including the
+   page header, error card, and shared button styles used by both
+   "back" and "logout" CTAs.
+
+   Conventions:
+   - Max content width of 1200px to accommodate the preview table.
+   - .dashboard-back-btn and .dashboard-logout-btn share identical
+     styles; they are listed together to reduce duplication.
+   - All colours come from globals.css design tokens.
+   ────────────────────────────────────────────────────────────── */
+
 .dashboard-wrapper {
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dashboard-header {
@@ -26,6 +42,8 @@
   margin: 0;
 }
 
+/* Error card is centred in the page with a generous top margin so it
+   reads as a standalone state, not a continuation of the header. */
 .dashboard-error-card {
   background: var(--color-surface);
   border: 1px solid var(--color-rim);
@@ -69,4 +87,11 @@
 .dashboard-logout-btn:hover {
   background: var(--color-accent-hover);
   text-decoration: none;
+}
+
+/* Setup container centres the setup form below the header */
+.dashboard-setup-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
 }

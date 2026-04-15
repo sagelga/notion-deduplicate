@@ -1,8 +1,16 @@
+// page.tsx — Course page (/course)
+//
+// Static marketing page listing Notion learning topics. No dynamic data —
+// content is hardcoded in SECTIONS below. The edge runtime declaration is
+// required for consistency with the rest of the app on Cloudflare Pages even
+// though this route does not use cookies or fetch.
+
 import Link from "next/link";
 import "./page.css";
 
 export const runtime = 'edge';
 
+// Each item renders as a numbered card. Order here determines display order.
 const SECTIONS = [
   {
     title: "Getting Started",
@@ -44,6 +52,7 @@ export default function CoursePage() {
       <div className="course-sections">
         {SECTIONS.map((section, i) => (
           <div key={section.title} className="course-section-card">
+            {/* Zero-padded number label: "01", "02", etc. */}
             <span className="course-section-num">{String(i + 1).padStart(2, "0")}</span>
             <div className="course-section-body">
               <h2 className="course-section-title">{section.title}</h2>

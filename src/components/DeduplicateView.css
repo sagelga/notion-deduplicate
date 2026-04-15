@@ -1,3 +1,24 @@
+/* ──────────────────────────────────────────────────────────────
+   DeduplicateView.css — manual deduplication view
+   (components/DeduplicateView.tsx)
+   Purpose: Styles the manual dedup UI: summary stats, grouped
+   duplicate tables with keep/delete row colouring, action controls,
+   and the result state shown after applying changes.
+
+   Conventions:
+   - .dedup-row-keep and .dedup-row-delete use low-alpha accent/red
+     backgrounds (0.04) so row intent is visible without overwhelming
+     the text in the cells.
+   - .badge-keep / .badge-delete use hardcoded hex colours (#2383e2,
+     #eb5757) rather than --color-accent because these badges must
+     always be blue/red regardless of theme accent overrides.
+   - Table hover uses raw rgba rather than --color-surface to keep the
+     tint neutral on coloured keep/delete rows; separate dark-mode
+     override flips the colour direction.
+   - .dedup-delete-warning uses a hardcoded red palette because there
+     is no semantic "danger" token in the design system.
+   ────────────────────────────────────────────────────────────── */
+
 .dedup-wrapper {
   display: flex;
   flex-direction: column;
@@ -78,7 +99,8 @@
   margin: 0;
 }
 
-/* Table */
+/* Table — horizontal scroll wrapper prevents the table from breaking
+   the page layout on narrow viewports. */
 .dedup-table-scroll {
   overflow-x: auto;
 }
@@ -111,6 +133,9 @@
   border-bottom: none;
 }
 
+/* Row hover tint is deliberately faint (0.02 alpha) so it doesn't
+   conflict with the keep (blue) and delete (red) row backgrounds.
+   Dark mode flips to a white-based tint. */
 .dedup-table tr:hover td {
   background: rgba(0, 0, 0, 0.02);
 }
@@ -160,7 +185,8 @@
   cursor: pointer;
 }
 
-/* Badges */
+/* Badges — hardcoded colours so keep=blue and delete=red remain
+   fixed regardless of any future accent colour changes. */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -349,7 +375,9 @@
   text-decoration: underline;
 }
 
-/* Delete warning callout */
+/* Delete warning callout — uses hardcoded red palette (#eb5757) because
+   the design system has no semantic "danger" token; the same values are
+   used across DeduplicateView, AutoDeduplicateView, and DatabaseSelector. */
 .dedup-delete-warning {
   font-size: 0.8125rem;
   color: #eb5757;

@@ -1,0 +1,19 @@
+/* ──────────────────────────────────────────────────────────────
+   CellValue.css — table cell value renderer (components/CellValue.tsx)
+   Purpose: Styles the empty/null state for Notion property cells
+   shown in the database preview table and dedup result tables.
+
+   Conventions:
+   - Uses --color-muted for empty/null text
+   - font-size: 0.85em is relative to the surrounding cell font size
+     so it scales correctly inside both the preview and dedup tables.
+   ────────────────────────────────────────────────────────────── */
+
+/* Null/empty cells are styled dimmer and italic to visually distinguish
+   absent data from cells with actual content. */
+.cell-null,
+.cell-empty {
+  color: var(--color-muted);
+  font-style: italic;
+  font-size: 0.85em;
+}

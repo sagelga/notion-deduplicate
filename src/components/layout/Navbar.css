@@ -1,6 +1,16 @@
 /* ──────────────────────────────────────────────────────────────
-   Navbar — single-tier Notion style (logo + controls)
-   Light background with dark text, subtle border bottom.
+   Navbar.css — top navigation bar (components/layout/Navbar.tsx)
+   Purpose: Single-row sticky header containing the logo, page links,
+   and right-side controls (theme toggle, auth button).
+
+   Conventions:
+   - position: sticky + top: 0 keeps the navbar visible while scrolling
+     without detaching from the document flow like position: fixed.
+   - z-index: 1000 sits below modals (z-index: 2000) and the dedup
+     progress island (z-index: 1500), but above all page content.
+   - Nav link hover background uses raw rgba rather than --color-surface
+     because it needs separate light/dark variants via [data-theme="dark"].
+   - Max inner width of 1200px matches dashboard and marketplace pages.
    ────────────────────────────────────────────────────────────── */
 
 .navbar {
@@ -34,6 +44,8 @@
   opacity: 0.7;
 }
 
+/* flex: 1 lets the links section grow and fill available space between
+   the logo and the right-side controls. */
 .nav-links {
   display: flex;
   align-items: center;
@@ -58,6 +70,8 @@
   text-decoration: none;
 }
 
+/* Dark-mode hover needs a white-based tint instead of black-based,
+   so it is handled with an attribute selector rather than a CSS variable. */
 [data-theme="dark"] .nav-link:hover {
   background: rgba(255, 255, 255, 0.07);
 }

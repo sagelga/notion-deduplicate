@@ -1,3 +1,16 @@
+/* ──────────────────────────────────────────────────────────────
+   page.css — Landing / home page (src/app/page.tsx)
+   Purpose: Layout and typography for the public-facing landing page,
+   including the hero section, tool card grid, and "get started" flow.
+
+   Conventions:
+   - Max content width of 860px, centred with auto margins.
+   - Two-column tool grid collapses to single column below 540px.
+   - All colours reference design tokens from globals.css.
+   - The hover ring on .landing-tool-card uses a hardcoded rgba value
+     because the accent colour is not available as an rgb triplet token.
+   ────────────────────────────────────────────────────────────── */
+
 .landing-wrapper {
   max-width: 860px;
   margin: 0 auto;
@@ -61,7 +74,9 @@
   margin: 0 0 1rem;
 }
 
-/* Tools grid */
+/* Tools grid — fixed 2-column layout rather than auto-fill so cards
+   always align symmetrically. Collapses to a single column at 540px
+   where two columns become too narrow to display descriptions legibly. */
 .landing-tools-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -88,6 +103,8 @@
 
 .landing-tool-card:hover {
   border-color: var(--color-accent);
+  /* Focus ring uses the raw accent hex because --color-accent is not
+     available as a triplet; 0.08 alpha keeps it subtle, not distracting. */
   box-shadow: 0 0 0 3px rgba(35, 131, 226, 0.08);
   text-decoration: none;
 }

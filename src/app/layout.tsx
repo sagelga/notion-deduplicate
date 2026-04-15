@@ -1,3 +1,19 @@
+// layout.tsx
+//
+// Root layout for the entire Next.js app. Wraps every page with:
+//   - ThemeProvider  — manages light/dark/system theme
+//   - DedupProvider  — global dedup session state (survives navigation)
+//   - Navbar / Footer — persistent chrome
+//   - CookieConsentBanner — GDPR/cookie consent UI
+//
+// The inline <Script strategy="beforeInteractive"> block prevents a flash of
+// wrong theme (FOUT) by reading localStorage and setting data-theme on <html>
+// before React hydrates. This runs synchronously before any CSS/JS is parsed.
+//
+// suppressHydrationWarning on <html> is required because the blocking script
+// may set data-theme before React hydrates, causing a mismatch that React would
+// otherwise warn about.
+
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter } from "next/font/google";
@@ -6,8 +22,15 @@ import { DedupProvider } from "@/hooks/useDedup";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CookieConsentBanner from "@/components/cookies/CookieConsentBanner";
-import { NavItem } from "@/types";
 import "./globals.css";
+
+interface NavItem {
+  label: string;
+  href: string;
+  external?: boolean;
+  children?: NavItem[];
+  disabled?: boolean;
+}
 
 const inter = Inter({
   subsets: ["latin"],

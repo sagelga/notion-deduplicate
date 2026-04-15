@@ -1,3 +1,16 @@
+/* ──────────────────────────────────────────────────────────────
+   Footer.css — page footer (components/layout/Footer.tsx)
+   Purpose: Thin 48px footer bar with copyright text on the left
+   and action controls (theme toggle, cookie settings) on the right.
+
+   Conventions:
+   - Fixed 48px height mirrors the navbar height, creating visual
+     symmetry at the top and bottom of each page.
+   - The outer .footer is full-width while .footer-inner is capped at
+     1200px and centred, matching all other page max-widths.
+   - Colours come from globals.css design tokens.
+   ────────────────────────────────────────────────────────────── */
+
 .footer {
   border-top: 1px solid var(--color-rim);
   background: var(--color-canvas);

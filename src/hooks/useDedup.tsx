@@ -1,3 +1,19 @@
+// useDedup.tsx
+//
+// Global React context that owns the deduplication session lifecycle.
+//
+// Why a context (not local state)?
+//   The dedup operation is long-running and survives page navigation. Storing
+//   state here (backed by localStorage) means the progress bar in the navbar
+//   and the detail view in AutoDeduplicateView always see the same data.
+//
+// Key design decisions:
+//   - localStorage persistence: lets the user refresh without losing progress.
+//   - pausedRef (a mutable ref, not state): pause/resume must be readable by
+//     the streaming fetch loop without causing re-renders on every tick.
+//   - On reload mid-run, phase is forced to "paused" because the stream is
+//     gone and can't be resumed automatically.
+
 "use client";
 
 import React, {
@@ -46,6 +62,7 @@ interface DedupContextType extends DedupState {
   pausedRef: React.MutableRefObject<boolean>;
 }
 
+// Key used to persist DedupState in localStorage across navigations/refreshes.
 const STORAGE_KEY = "dedup:state";
 
 const initialState: DedupState = {
@@ -59,12 +76,14 @@ const initialState: DedupState = {
   errorMessage: "",
 };
 
+// Only writes when running in a browser — guards against SSR/edge execution
+// where window is undefined.
 function saveState(state: DedupState) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    // Storage full or unavailable
+    // Storage full or unavailable — non-fatal; state will be lost on refresh.
   }
 }
 
@@ -83,11 +102,13 @@ export const DedupProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [state, setState] = useState<DedupState>(() => {
+    // Lazy initialiser runs once at mount time to hydrate from localStorage.
     if (typeof window === "undefined") return { ...initialState };
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
+        // Only restore state if the session was active — skip stale cleared state.
         if (parsed?.isActive) {
           // If it was running, restore as paused (since the stream is gone)
           if (parsed.phase === "running") {
@@ -97,14 +118,17 @@ export const DedupProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
     } catch {
-      // Ignore
+      // Corrupted JSON — fall through to initialState.
     }
     return { ...initialState };
   });
 
+  // Mutable ref shared with AutoDeduplicateView. Reading/writing it does not
+  // trigger re-renders, which is intentional — the stream loop polls this ref
+  // on every NDJSON event without causing React to flush a new render cycle.
   const pausedRef = useRef(false);
 
-  // Persist state changes
+  // Only persist when a session is active to avoid writing stale cleared state.
   useEffect(() => {
     if (state.isActive) {
       saveState(state);
@@ -141,6 +165,8 @@ export const DedupProvider: React.FC<{ children: React.ReactNode }> = ({
     setState((prev) => ({ ...prev, phase }));
   }, []);
 
+  // Setting an error message always transitions phase to "error" so callers
+  // don't have to call setPhase separately.
   const setErrorMessage = useCallback((errorMessage: string) => {
     setState((prev) => ({ ...prev, errorMessage, phase: "error" }));
   }, []);

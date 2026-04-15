@@ -1,3 +1,17 @@
+// /api/auth/callback
+//
+// Handles the OAuth redirect from Notion after the user approves access.
+// Notion appends a short-lived ?code= to the URL; this route exchanges it for
+// a long-lived access_token using the client credentials.
+//
+// Credential resolution order (same as /api/auth):
+//   1. Cookie values set by the user (custom OAuth app)
+//   2. Server-level environment variables (shared default app)
+//
+// On success the access_token is stored as an httpOnly cookie (notion_token)
+// with a 24-hour TTL and the user is forwarded to /duplicate.
+// On failure the raw Notion error is returned so the user can diagnose it.
+
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -27,6 +41,8 @@ export async function GET(request: Request) {
   let accessToken: string;
 
   try {
+    // Notion requires HTTP Basic auth for the token exchange: credentials are
+    // base64-encoded as "clientId:clientSecret" per the OAuth 2.0 spec.
     const response = await fetch("https://api.notion.com/v1/oauth/token", {
       method: "POST",
       headers: {
@@ -59,11 +75,13 @@ export async function GET(request: Request) {
     return new Response("Authentication failed", { status: 500 });
   }
 
+  // Non-httpOnly with short TTL: the client reads this cookie on /duplicate load,
+  // moves the token to localStorage, then immediately expires the cookie.
   cookieStore.set("notion_token", accessToken, {
-    httpOnly: true,
+    httpOnly: false,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 86400,
+    maxAge: 60,
     path: "/",
   });
 

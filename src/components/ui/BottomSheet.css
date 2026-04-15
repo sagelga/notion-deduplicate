@@ -1,5 +1,23 @@
-/* BottomSheet — uses theme variables for light/dark support */
+/* ──────────────────────────────────────────────────────────────
+   BottomSheet.css — generic bottom sheet / modal (components/ui/BottomSheet.tsx)
+   Purpose: Reusable bottom sheet component used by the theme settings
+   modal, cookie consent, and cookie settings panels.
 
+   Conventions:
+   - z-index: 2000 places the overlay above the sticky navbar (1000)
+     and the dedup progress island (1500), ensuring it fully occludes
+     the page.
+   - The sheet is centred horizontally via margin: 0 auto with a
+     max-width of 520px, so it behaves as a centred modal on wide
+     screens rather than spanning the full viewport width.
+   - padding-bottom: env(safe-area-inset-bottom) prevents the sheet
+     content from being obscured by iOS home indicator.
+   - bs-slide-up uses cubic-bezier(0.32, 0.72, 0, 1) — a spring-like
+     easing that overshoots slightly for a natural feel.
+   ────────────────────────────────────────────────────────────── */
+
+/* Overlay dims the page behind the sheet. backdrop-filter blur adds
+   depth and de-emphasises the content beneath. */
 .bottom-sheet-overlay {
   position: fixed;
   inset: 0;
@@ -86,6 +104,8 @@
   padding: 0.75rem;
 }
 
+/* On screens narrower than the sheet's max-width, remove the side
+   margins so the sheet extends edge-to-edge like a native mobile sheet. */
 @media (max-width: 520px) {
   .bottom-sheet { max-width: 100%; }
   .bottom-sheet-header { padding: 1rem 1.25rem; }

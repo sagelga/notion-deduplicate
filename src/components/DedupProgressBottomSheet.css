@@ -1,5 +1,25 @@
 /* ──────────────────────────────────────────────────────────────
-   DedupProgressBottomSheet — collapsed island + expanded sheet
+   DedupProgressBottomSheet.css — progress island + expanded sheet
+   (components/DedupProgressBottomSheet.tsx)
+   Purpose: Two-state progress UI: a collapsed "Dynamic Island" pill
+   anchored at the bottom-centre of the viewport, and an expanded
+   bottom sheet with full dedup progress details and action buttons.
+
+   z-index layers:
+   - .dedup-island:  1500 — above page content and navbar (1000)
+   - .dedup-sheet-overlay + .dedup-sheet:  2000 — same level as
+     other modals; fully occludes the island when expanded.
+
+   Conventions:
+   - The island is centred with left:50% + translateX(-50%); hover
+     adds a compound transform (still includes the translateX offset)
+     to avoid losing the horizontal centring.
+   - Dark-mode box shadows use higher alpha values to compensate for
+     the darker canvas where the light-mode values would be invisible.
+   - Phase badges (.dedup-phase--*) use hardcoded semantic colours
+     (orange for paused, red for error) not covered by the token set.
+   - .dedup-act-btn variants (primary / secondary / ghost) follow the
+     same visual hierarchy as buttons throughout the app.
    ────────────────────────────────────────────────────────────── */
 
 /* ── Collapsed island ── */
@@ -28,11 +48,15 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
+/* Hover transform must repeat the translateX(-50%) offset to avoid
+   resetting the horizontal centring while adding the vertical lift. */
 .dedup-island:hover {
   transform: translateX(-50%) translateY(-3px);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.07);
 }
 
+/* Dark mode requires much stronger shadow alpha to remain visible
+   against the near-black --color-surface background. */
 [data-theme="dark"] .dedup-island {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.2);
 }
@@ -175,6 +199,8 @@
   background: rgba(82, 156, 202, 0.15);
 }
 
+/* Orange palette for "paused" — a semantic warning colour that has no
+   token in the design system; mirrors the amber used in AutoDeduplicateView. */
 .dedup-phase--paused {
   color: #d9730d;
   background: rgba(217, 115, 13, 0.1);
@@ -352,7 +378,8 @@
   border-color: var(--color-text-secondary);
 }
 
-/* ── Responsive ── */
+/* ── Responsive ── On screens narrower than the sheet max-width, remove
+   the side margins so the sheet extends edge-to-edge. */
 @media (max-width: 520px) {
   .dedup-sheet {
     max-width: 100%;

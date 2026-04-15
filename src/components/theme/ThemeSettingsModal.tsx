@@ -1,10 +1,23 @@
+// ThemeSettingsModal.tsx
+//
+// Bottom-sheet modal for selecting the colour theme (light / dark / system).
+// The current theme is read from and written to the useTheme hook (which
+// persists the preference to localStorage and applies the appropriate
+// data-theme attribute to the document root).
+//
+// Theme options are defined as a static array so adding a new theme variant
+// only requires appending to THEME_OPTIONS without touching the render logic.
+// Selecting an option immediately applies the theme and closes the sheet.
+// The active option gets a check mark to confirm the current selection at a glance.
+
 "use client";
 
 import React from "react";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { useTheme } from "@/hooks/useTheme";
-import { Theme } from "@/types";
 import "./ThemeSettingsModal.css";
+
+type Theme = "light" | "dark" | "system";
 
 interface ThemeOption {
   value: Theme;

@@ -1,9 +1,26 @@
+// Navbar.tsx
+//
+// Top navigation bar component. It is intentionally generic — it receives brand
+// name, nav links, and an optional controls slot as props so it can be reused
+// across different pages without hard-coding any routes or UI elements.
+//
+// The controls prop accepts any ReactNode, making it a flexible slot for things
+// like a user avatar, search input, or theme toggle without coupling the navbar
+// to any specific feature.
+
 "use client";
 
 import React from "react";
 import Link from "next/link";
-import { NavItem } from "@/types";
 import "./Navbar.css";
+
+interface NavItem {
+  label: string;
+  href: string;
+  external?: boolean;
+  children?: NavItem[];
+  disabled?: boolean;
+}
 
 interface NavbarProps {
   /** Brand/logo text shown in top-left */

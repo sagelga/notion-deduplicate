@@ -1,3 +1,22 @@
+/* ──────────────────────────────────────────────────────────────
+   marketplace/page.css — Marketplace page (/marketplace)
+   Purpose: Layout for the template marketplace, including the hero,
+   search/filter controls, featured card grid, main card grid,
+   and empty state.
+
+   Conventions:
+   - Max width 1200px, matching the dashboard, to accommodate
+     wide multi-column grids.
+   - Two distinct grids: .mkt-featured-grid uses minmax(340px, 1fr)
+     for larger featured cards; .mkt-grid uses minmax(280px, 1fr) for
+     the regular catalogue.
+   - .mkt-card-badge uses a raw rgba dark overlay rather than a design
+     token because it sits on top of arbitrary preview background colours.
+   - Responsive breakpoints at 768px and 480px progressively simplify
+     the grid and controls layout for smaller screens.
+   - All other colours come from globals.css design tokens.
+   ────────────────────────────────────────────────────────────── */
+
 .mkt-wrapper {
   max-width: 1200px;
   margin: 0 auto;
@@ -30,7 +49,9 @@
   max-width: 600px;
 }
 
-/* ── Controls ── */
+/* ── Controls ──
+   flex-wrap allows the search bar and filter dropdowns to stack
+   vertically on narrow viewports without overflow. */
 .mkt-controls {
   display: flex;
   flex-wrap: wrap;
@@ -111,6 +132,8 @@
   letter-spacing: 0.04em;
 }
 
+/* auto-fill with minmax(340px) lets the grid show as many columns as
+   the viewport allows while keeping cards wide enough to be readable. */
 .mkt-featured-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -128,6 +151,8 @@
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
+/* Slight upward lift on hover gives cards a sense of depth without
+   an expensive GPU-intensive scale transform. */
 .mkt-featured-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -223,6 +248,9 @@
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
 }
 
+/* Badge is absolutely positioned over the preview area.
+   The semi-transparent dark background + backdrop blur keeps it legible
+   regardless of the preview's background colour (emoji or image). */
 .mkt-card-badge {
   position: absolute;
   top: 0.625rem;
@@ -318,7 +346,11 @@
   color: var(--color-accent-fg);
 }
 
-/* ── Responsive ── */
+/* ── Responsive ──
+   768px: switch controls to a vertical stack and collapse featured
+   grid to single column.
+   480px: reduce title size further and force the main grid to 1 column
+   for small phones. */
 @media (max-width: 768px) {
   .mkt-wrapper {
     padding: 2rem 1.25rem 4rem;

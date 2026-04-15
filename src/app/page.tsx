@@ -1,8 +1,18 @@
+// page.tsx — Landing page (/)
+//
+// Server component that renders the public homepage.
+// Checks whether the user already has a Notion token cookie to decide whether
+// to show the SetupForm (connect token) or a "Go to Duplicate" shortcut.
+//
+// Must be an edge runtime route because it reads cookies(), which requires
+// the edge runtime on Cloudflare Pages.
+
 import { cookies } from "next/headers";
 import Link from "next/link";
-import SetupForm from "@/components/SetupForm";
 import "./page.css";
 
+// Required for Cloudflare Pages — all routes that use cookies() must opt into
+// the edge runtime explicitly.
 export const runtime = 'edge';
 
 const TOOLS = [
@@ -30,6 +40,8 @@ const TOOLS = [
 
 export default async function Home() {
   const cookieStore = await cookies();
+  // A truthy notion_token cookie means the user has already pasted their
+  // integration token via SetupForm — show a shortcut instead of the form.
   const isConnected = !!cookieStore.get("notion_token")?.value;
 
   return (
@@ -58,27 +70,6 @@ export default async function Home() {
             </Link>
           ))}
         </div>
-      </section>
-
-      {/* Get started */}
-      <section className="landing-start">
-        <h2 className="landing-section-label">Get Started</h2>
-        {isConnected ? (
-          <div className="landing-connected">
-            <p className="landing-connected-text">Your Notion account is connected.</p>
-            <Link href="/duplicate" className="landing-cta-btn">Go to Duplicate</Link>
-          </div>
-        ) : (
-          <div className="landing-setup">
-            <p className="landing-setup-desc">
-              Connect your Notion integration token to start using the tools.
-            </p>
-            <p className="landing-trust-note">
-              Your token is saved only in your browser. We never store it.
-            </p>
-            <SetupForm />
-          </div>
-        )}
       </section>
     </div>
   );

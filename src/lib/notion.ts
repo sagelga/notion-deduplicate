@@ -1,16 +1,26 @@
 // notion.ts
 //
 // Central module for all Notion API calls. Every function here communicates
-// directly with the Notion REST API using the user's integration token.
+// with the Notion REST API — all requests are routed through /api/notion-proxy
+// to work around Notion's CORS restriction for integration tokens (secret_...).
 //
 // Key responsibilities:
 //  - Type definitions for raw Notion API shapes (NotionPropertyValue, etc.)
-//  - Header construction (notionHeaders)
+//  - Header construction (notionHeaders) — used by the proxy route server-side
 //  - Extracting scalar values from the polymorphic property shape (getPropertyValue)
-//  - Paginated database querying with read-ahead prefetch (paginateDatabase)
+//  - Paginated database querying with read-ahead prefetch + adaptive rate limiting
+//    (paginateDatabase)
 //  - Database schema introspection (getDatabaseSchema)
-//  - Workspace database discovery with retry (listDatabases)
+//  - Workspace database discovery (listDatabases)
 //  - Single-page mutation: soft-delete via archive, hard-delete via block DELETE
+//
+// Rate limiting (Notion allows ~3 req/s per integration):
+//  - All fetch calls go through fetchWithRetry, which handles 429 responses by
+//    respecting the Retry-After header forwarded from the proxy (or falling back
+//    to exponential back-off).
+//  - paginateDatabase adds an adaptive inter-request delay that starts at 0 and
+//    increases when 429s are received, then decays back toward 0 as requests
+//    succeed — automatic slowdown/speedup with no manual tuning required.
 
 type NotionRichText = { plain_text: string }[];
 type NotionSelect = { name: string } | null;
@@ -60,8 +70,8 @@ export interface NotionDatabase {
 }
 
 // Build the standard headers required by every Notion API request.
-// The Notion-Version header pins us to a stable API version so that upstream
-// changes don't silently break field shapes.
+// Used by the server-side proxy route (src/app/api/notion-proxy/route.ts);
+// client code should call the exported functions below instead.
 export function notionHeaders(token: string): HeadersInit {
   return {
     Authorization: `Bearer ${token}`,
@@ -115,29 +125,134 @@ export function getPropertyValue(
   }
 }
 
+// Pause execution for `ms` milliseconds.
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// Route a Notion API call through the server proxy to avoid CORS restrictions.
+// path must start with "/v1/". The token is included in the encrypted body.
+function notionProxyFetch(
+  path: string,
+  method: string,
+  token: string,
+  body?: unknown
+): Promise<Response> {
+  return fetch("/api/notion-proxy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, method, token, ...(body !== undefined ? { body } : {}) }),
+  });
+}
+
+// Fetch with automatic retry for rate-limit (429) and transient (5xx) errors.
+//
+// 429 — Too Many Requests:
+//   Waits for the number of seconds in the Retry-After response header.
+//   Falls back to capped exponential back-off (1s → 2s → 4s … max 64s) when
+//   the header is absent. Retries up to maxRetries times before throwing.
+//
+// 502 / 503 / 504 — Transient gateway errors:
+//   Waits with linear back-off (1s, 2s, 3s …). Returns the error response
+//   after maxRetries rather than throwing, so callers can inspect the status.
+//
+// All other non-2xx responses are returned immediately (permanent errors such
+// as 401 Unauthorized or 404 Not Found should not be retried).
+async function fetchWithRetry(
+  path: string,
+  method: string,
+  token: string,
+  body?: unknown,
+  maxRetries = 5
+): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await notionProxyFetch(path, method, token, body);
+
+    if (res.ok) return res;
+
+    if (res.status === 429) {
+      if (attempt >= maxRetries) {
+        throw new Error(`Notion rate limit exceeded after ${maxRetries} retries (429)`);
+      }
+      const retryAfter = res.headers.get("Retry-After");
+      const waitMs = retryAfter
+        ? parseFloat(retryAfter) * 1000
+        : Math.min(1000 * Math.pow(2, attempt), 64_000);
+      await sleep(waitMs);
+      continue;
+    }
+
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      if (attempt >= maxRetries) return res; // let caller handle the final error response
+      await sleep(1000 * (attempt + 1));
+      continue;
+    }
+
+    // Non-retryable error (401, 400, 404, etc.) — return immediately.
+    return res;
+  }
+  // Unreachable; TypeScript requires a return after the loop.
+  throw new Error("Unexpected state in fetchWithRetry");
+}
+
 // Async generator that streams pages from a Notion database in batches of 100
 // (Notion's maximum page_size). Designed to be consumed by the dedup pipeline's
-// fetchWorker, which pushes each batch into fetchQueue while the generator
-// overlaps the next network request with the consumer's processing.
+// fetchWorker, which processes each batch while the generator prefetches the next.
+//
+// Adaptive rate limiting:
+//   adaptiveDelayMs starts at 0 (no delay — full speed).
+//   On 429: set to max(current, Retry-After * 1000) so the next request is
+//     already slowed down before we even see a second rate-limit error.
+//   On success: multiply by 0.75 (25% decay per successful batch), flooring at 0.
+//   This means one 429 slows all subsequent batches proportionally; sustained
+//   success gradually returns to full speed without manual configuration.
 export async function* paginateDatabase(
   databaseId: string,
   token: string
 ): AsyncGenerator<RawNotionPage[]> {
-  const headers = notionHeaders(token);
+  // Per-session adaptive delay in milliseconds. Mutated by fetchPage callbacks.
+  let adaptiveDelayMs = 0;
 
   type PageResult = { results: RawNotionPage[]; has_more: boolean; next_cursor: string | null };
 
-  const fetchPage = (cursor: string | undefined): Promise<PageResult> =>
-    fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
-      method: "POST",
-      headers,
-      // Only include start_cursor when paginating — omitting it entirely on
-      // the first request is required by the Notion API.
-      body: JSON.stringify({ page_size: 10, ...(cursor ? { start_cursor: cursor } : {}) }),
-    }).then((res) => {
-      if (!res.ok) throw new Error(`Failed to fetch database: ${res.status} ${res.statusText}`);
-      return res.json() as Promise<PageResult>;
-    });
+  const fetchPage = async (cursor: string | undefined): Promise<PageResult> => {
+    // Apply adaptive delay accumulated from any previous rate-limit encounters.
+    if (adaptiveDelayMs > 0) {
+      await sleep(adaptiveDelayMs);
+    }
+
+    for (let attempt = 0; attempt <= 5; attempt++) {
+      const res = await notionProxyFetch(
+        `/v1/databases/${databaseId}/query`,
+        "POST",
+        token,
+        { page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }
+      );
+
+      if (res.ok) {
+        // Success: decay adaptive delay toward 0 (gradually speed back up).
+        adaptiveDelayMs = Math.floor(adaptiveDelayMs * 0.75);
+        return res.json() as Promise<PageResult>;
+      }
+
+      if (res.status === 429) {
+        if (attempt >= 5) {
+          throw new Error("Notion rate limit exceeded after 5 retries on database query");
+        }
+        const retryAfter = res.headers.get("Retry-After");
+        const waitMs = retryAfter
+          ? parseFloat(retryAfter) * 1000
+          : Math.min(1000 * Math.pow(2, attempt), 64_000);
+        // Raise adaptive delay so the NEXT batch is proactively slowed too.
+        adaptiveDelayMs = Math.max(adaptiveDelayMs, waitMs);
+        await sleep(waitMs);
+        continue;
+      }
+
+      throw new Error(`Failed to fetch database: ${res.status} ${res.statusText}`);
+    }
+    throw new Error("Unexpected state in fetchPage");
+  };
 
   // Kick off first fetch immediately
   let pending = fetchPage(undefined);
@@ -166,10 +281,11 @@ export async function getDatabaseSchema(
   databaseId: string,
   token: string
 ): Promise<NotionProperty[]> {
-  const headers = notionHeaders(token);
-  const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
-    headers,
-  });
+  const response = await fetchWithRetry(
+    `/v1/databases/${databaseId}`,
+    "GET",
+    token
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to fetch database schema: ${response.status}`);
@@ -192,59 +308,32 @@ export async function getDatabaseSchema(
 
 // List all databases the integration token has access to (up to 100).
 // Uses the /search endpoint filtered to object type "database".
-//
-// Retries up to 3 times with linear back-off (1s, 2s) for gateway errors
-// (502/503/504) which are common on the Notion API during high load.
-// Non-gateway errors (e.g. 401 invalid token, 400 bad request) are thrown
-// immediately without retrying because retrying won't fix them.
+// Rate-limit and transient errors are handled by fetchWithRetry.
 export async function listDatabases(token: string): Promise<NotionDatabase[]> {
-  const headers = notionHeaders(token);
-  const body = JSON.stringify({
-    filter: { value: "database", property: "object" },
-    page_size: 100,
-  });
+  const response = await fetchWithRetry(
+    "/v1/search",
+    "POST",
+    token,
+    { filter: { value: "database", property: "object" }, page_size: 100 }
+  );
 
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    // Wait before retrying: 0ms on first attempt, 1000ms on second, 2000ms on third.
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 1000 * attempt));
-    }
-
-    const response = await fetch("https://api.notion.com/v1/search", {
-      method: "POST",
-      headers,
-      body,
-    });
-
-    // Transient gateway errors — worth retrying.
-    if (response.status === 504 || response.status === 502 || response.status === 503) {
-      lastError = new Error(`Failed to list databases: ${response.status} (attempt ${attempt + 1}/3)`);
-      continue;
-    }
-
-    // Other non-2xx errors are permanent (auth, not found, etc.) — throw immediately.
-    if (!response.ok) {
-      throw new Error(`Failed to list databases: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.results || [];
+  if (!response.ok) {
+    throw new Error(`Failed to list databases: ${response.status}`);
   }
 
-  throw lastError ?? new Error("Failed to list databases after 3 attempts");
+  const data = await response.json();
+  return data.results || [];
 }
 
 // Hard-delete a page by deleting its underlying block. This is permanent and
 // cannot be undone from the Notion UI. Prefer archivePage for safer operation.
 // Note: uses the /blocks endpoint (not /pages) — Notion requires this for deletion.
 export async function deletePage(pageId: string, token: string): Promise<void> {
-  const headers = notionHeaders(token);
-  const response = await fetch(`https://api.notion.com/v1/blocks/${pageId}`, {
-    method: "DELETE",
-    headers,
-  });
+  const response = await fetchWithRetry(
+    `/v1/blocks/${pageId}`,
+    "DELETE",
+    token
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to delete page: ${response.status}`);
@@ -255,12 +344,12 @@ export async function deletePage(pageId: string, token: string): Promise<void> {
 // trash and can be restored within 30 days. This is the default dedup action
 // because it's reversible.
 export async function archivePage(pageId: string, token: string): Promise<void> {
-  const headers = notionHeaders(token);
-  const response = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify({ archived: true }),
-  });
+  const response = await fetchWithRetry(
+    `/v1/pages/${pageId}`,
+    "PATCH",
+    token,
+    { archived: true }
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to archive page: ${response.status}`);

@@ -1,4 +1,17 @@
-/* CookieConsentBanner — uses theme variables for light/dark support */
+/* ──────────────────────────────────────────────────────────────
+   CookieConsentBanner.css — cookie consent prompt
+   (components/cookies/CookieConsentBanner.tsx)
+   Purpose: Body content rendered inside a BottomSheet presenting
+   the cookie consent message with "Accept all" and "Reject" buttons.
+
+   Conventions:
+   - Buttons are full-width and stacked vertically so the primary
+     action (Accept) is visually dominant.
+   - .cookie-btn-reject uses a transparent background with a border;
+     on hover it adopts the accent colour to signal interactivity
+     without looking as prominent as the accept button.
+   - Colours come from globals.css design tokens.
+   ────────────────────────────────────────────────────────────── */
 
 .cookie-banner-body {
   padding: 0.25rem 0.25rem 0.5rem;

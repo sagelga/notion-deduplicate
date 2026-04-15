@@ -1,3 +1,19 @@
+/* ──────────────────────────────────────────────────────────────
+   course/page.css — Course / onboarding page
+   Purpose: Layout for the /course route that walks users through
+   how to use the Notion deduplication tool, displayed as a vertical
+   list of numbered section cards.
+
+   Conventions:
+   - Narrower max-width (720px) than dashboard pages, optimised for
+     linear reading.
+   - Section cards use a horizontal flex layout: number label on the
+     left (flex-shrink: 0) and body text on the right.
+   - font-variant-numeric: tabular-nums on the section number keeps
+     single- and double-digit numbers visually aligned.
+   - All colours come from globals.css design tokens.
+   ────────────────────────────────────────────────────────────── */
+
 .course-wrapper {
   max-width: 720px;
   margin: 0 auto;
@@ -43,6 +59,9 @@
   background: var(--color-surface);
 }
 
+/* flex-shrink: 0 prevents the number from collapsing when the title
+   text is long. padding-top nudges the number into optical alignment
+   with the first line of the section title. */
 .course-section-num {
   font-size: 0.75rem;
   font-weight: 600;
@@ -73,6 +92,8 @@
   line-height: 1.55;
 }
 
+/* CTA row wraps on narrow screens so the button stays full-width
+   below the text rather than being squeezed into the same line. */
 .course-cta {
   display: flex;
   align-items: center;

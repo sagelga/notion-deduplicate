@@ -1,10 +1,24 @@
+@import "tailwindcss";
+
 /* ──────────────────────────────────────────────────────────────
-   Design Tokens
-   Scope: page content area (navbar + main content).
-   Footer, BottomSheet, and modals use their own hardcoded dark colors.
+   globals.css
+   Purpose: Design token definitions and base-level resets that
+   apply to the entire application.
+
+   Conventions:
+   - All color values are exposed as CSS custom properties on :root
+     (light theme default) and overridden under [data-theme="dark"].
+   - The --color-rim token is used for borders and dividers throughout
+     the app; its alpha-based value ensures it adapts to colored
+     backgrounds without needing separate overrides.
+   - --color-accent / --color-accent-hover pair is the single source
+     of truth for interactive blue; components never hardcode #2383e2.
+   - Scope: page content area (navbar + main content).
+     Footer, BottomSheet, and modals use their own hardcoded dark colors.
    ────────────────────────────────────────────────────────────── */
 
-/* Light theme (default) */
+/* Light theme (default) — applied to :root so components work without an
+   explicit data-theme attribute before JS hydration sets the real value. */
 :root,
 [data-theme="light"] {
   --color-canvas: #ffffff;
@@ -35,7 +49,10 @@
   color-scheme: dark;
 }
 
-/* ── Base reset ── */
+/* ── Base reset ──
+   Minimal normalisation; no full reset library is used.
+   box-sizing: border-box is applied universally so padding and border
+   are included in element dimensions, avoiding layout surprises. */
 *,
 *::before,
 *::after {
@@ -64,7 +81,10 @@ a:hover {
   text-decoration: underline;
 }
 
-/* ── Layout helpers ── */
+/* ── Layout helpers ──
+   #__next and main form a full-height column flex container so the
+   footer is always pushed to the bottom of the viewport even on short
+   pages. .page-content takes the remaining space via flex: 1. */
 #__next,
 main {
   display: flex;

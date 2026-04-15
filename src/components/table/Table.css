@@ -1,0 +1,232 @@
+.table-wrapper {
+  width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--color-rim);
+  display: flex;
+  flex-direction: column;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-rim);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.table-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.table-card-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0;
+}
+
+.table-card-count {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-left: auto;
+}
+
+.table-row-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-rim);
+  border-top-color: var(--color-text);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table thead {
+  background-color: var(--color-surface);
+  border-bottom: 2px solid var(--color-rim);
+}
+
+.table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.table th.sortable {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.table th.sortable:hover {
+  background-color: var(--color-canvas);
+}
+
+.table th.table-col--active {
+  background-color: var(--color-canvas);
+  border-left: 4px solid var(--color-accent);
+  padding-left: 12px;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--color-rim);
+  transition: background-color 0.2s ease;
+}
+
+.table td {
+  padding: 12px 16px;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.table td.table-col--active {
+  background-color: var(--color-canvas);
+  border-left: 4px solid var(--color-accent);
+  padding-left: 12px;
+}
+
+.table-row--skeleton {
+  pointer-events: none;
+}
+
+.table-skeleton {
+  height: 16px;
+  background: linear-gradient(
+    90deg,
+    var(--color-rim) 0%,
+    var(--color-surface) 50%,
+    var(--color-rim) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.table-striped tbody tr:nth-child(odd) {
+  background-color: var(--color-canvas);
+}
+
+.table-hover tbody tr:hover {
+  background-color: var(--color-surface);
+}
+
+.table .empty-row {
+  border-bottom: 1px solid var(--color-rim);
+}
+
+.table .empty-message {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  padding: 24px 16px;
+}
+
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-rim);
+  font-size: 13px;
+}
+
+.table-page-btn {
+  padding: 6px 12px;
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-rim);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.table-page-btn:hover:not(:disabled) {
+  background-color: var(--color-surface);
+  border-color: var(--color-rim);
+}
+
+.table-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.table-page-info {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  min-width: 120px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .table {
+    font-size: 13px;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 12px;
+  }
+
+  .table th.table-col--active,
+  .table td.table-col--active {
+    padding-left: 8px;
+  }
+
+  .table-header {
+    padding: 8px 12px;
+  }
+
+  .table-pagination {
+    padding: 8px 12px;
+  }
+}

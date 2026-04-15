@@ -1,3 +1,28 @@
+/* ──────────────────────────────────────────────────────────────
+   DatabaseSelector.css — database + dedup configuration panel
+   (components/DatabaseSelector.tsx)
+   Purpose: Styles the sentence-style configuration row (database,
+   field, action, mode, timing dropdowns + confirm button), the
+   database preview table with skeleton loading states, and all
+   supporting cards and controls shown before dedup starts.
+
+   Conventions:
+   - The "sentence row" (.db-config-row) uses flex-wrap so dropdowns
+     reflow to a new line on narrow viewports rather than overflowing.
+   - .db-config-checkmark uses margin-left: auto to push the confirm
+     button to the far right of the row regardless of how many
+     dropdowns precede it.
+   - .db-skeleton uses a background-position animation rather than
+     opacity/width to achieve a smooth shimmer effect that works on
+     elements of arbitrary size.
+   - Sticky table headers (position: sticky + top: 0) inside the
+     preview scroll container keep columns labelled during scrolling.
+   - .db-mode-btn--auto uses color-mix for a tinted accent background,
+     matching the ThemeSettingsModal active state pattern.
+   - The mobile breakpoint at 720px reduces padding in the config row
+     and shrinks font sizes to keep the sentence readable on phones.
+   ────────────────────────────────────────────────────────────── */
+
 /* ── Main layout ── */
 .db-layout {
   display: flex;
@@ -5,7 +30,10 @@
   gap: 1.25rem;
 }
 
-/* ── Configuration row (sentence-style) ── */
+/* ── Configuration row (sentence-style) ──
+   Horizontal flex row that reads as a natural sentence:
+   "Deduplicate [db] using [field] by [action] [mode] [timing] ✓"
+   flex-wrap allows the row to reflow on narrow screens. */
 .db-config-row {
   display: flex;
   align-items: center;
@@ -25,7 +53,6 @@
 }
 
 .db-config-checkmark {
-  margin-left: auto;
   padding: 0.5rem 1rem;
   background: var(--color-accent);
   color: var(--color-accent-fg);
@@ -275,21 +302,6 @@
   background: var(--color-accent-hover);
 }
 
-/* ── Skip empty checkbox ── */
-.db-skip-empty {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin-top: 0.875rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  line-height: 1.4;
-}
-
-.db-skip-empty input[type="checkbox"] {
-  margin-top: 0.1rem;
-  flex-shrink: 0;
-}
 
 /* ── Preview table ── */
 .db-preview-card {
@@ -475,7 +487,11 @@
   font-weight: 500;
 }
 
-/* ── Skeleton loading animation ── */
+/* ── Skeleton loading animation ──
+   The shimmer is achieved by shifting a wide (200%) gradient horizontally
+   via background-position. This works on any element size without
+   needing to know its width. --color-rim and --color-surface automatically
+   adapt to the active theme, keeping the shimmer subtle in both modes. */
 .db-skeleton {
   background: linear-gradient(
     90deg,
@@ -501,7 +517,9 @@
   opacity: 0.7;
 }
 
-/* ── Mobile: optimize sentence row ── */
+/* ── Mobile: optimise sentence row ──
+   At 720px the sentence row can become cramped; reduce gap, padding,
+   and font size so all dropdowns fit without triggering horizontal scroll. */
 @media (max-width: 720px) {
   .db-layout {
     gap: 1rem;

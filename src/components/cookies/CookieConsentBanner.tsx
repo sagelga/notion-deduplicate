@@ -1,3 +1,21 @@
+// CookieConsentBanner.tsx
+//
+// GDPR-style cookie consent banner that appears on first visit (or whenever
+// consent has not yet been recorded). It is rendered as a BottomSheet so it
+// appears above other page content without causing layout shifts.
+//
+// Behaviour:
+// - On mount it reads the persisted cookie preferences. If consent has already
+//   been given, the banner is never shown.
+// - A 400ms delay before showing the banner prevents it from flashing during
+//   the initial page render/hydration.
+// - "Accept all" enables both functional and analytics cookies.
+// - "Reject all" / closing the sheet enables only functional (required) cookies.
+// - "Manage preferences" opens CookieSettingsModal for granular control.
+//
+// The `mounted` guard prevents the component from rendering during SSR, which
+// would cause a hydration mismatch because localStorage is not available server-side.
+
 "use client";
 
 import React, { useEffect, useState } from "react";

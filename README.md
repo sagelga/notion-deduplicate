@@ -173,3 +173,8 @@ npm run lint
 ## License
 
 MIT
+
+
+Project documentation in notion: https://www.notion.so/sagelga/Notion-Deduplication-33d7f2a665aa804a9e5bdaec5da17a18
+Screen flow project docs: https://www.notion.so/sagelga/User-Screen-Flow-33d7f2a665aa80a9a645c1274af45f20
+UX analysis on 2026-04-09: https://www.notion.so/sagelga/UX-Analysis-33d7f2a665aa80ac9042f235fc1f8c21

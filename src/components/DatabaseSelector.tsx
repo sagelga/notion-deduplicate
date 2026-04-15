@@ -1,18 +1,34 @@
+// DatabaseSelector.tsx
+//
+// Top-level client component for the /duplicate page. It owns all pre-run
+// configuration state and renders:
+//   1. ConfigRow — the sentence-style "Deduplicate [db] using [field] by [action] …" UI
+//   2. DatabasePreviewTable — a read-only sample of the selected database
+//   3. AutoDeduplicateView — mounted once the user clicks ✓ to start a run
+//
+// Flow:
+//   - On mount, the first database is auto-selected and its schema + preview are
+//     fetched in parallel.
+//   - Changing the database resets all run state (autoStarted, dryRunConfirmed, etc.)
+//     and re-fetches schema + preview.
+//   - When autoTiming === "later", the first run is a dry run (dryRun=true).
+//     AutoDeduplicateView calls onConfirm() when the user approves the preview, which
+//     sets dryRunConfirmed=true and causes a re-mount with dryRun=false (the "real" run).
+//   - The AutoDeduplicateView key ("dry-run" / "real-run") forces a fresh mount
+//     between the dry-run preview and the confirmed live run.
+
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { NotionProperty, type NotionDatabase } from "@/lib/notion";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { NotionProperty, type NotionDatabase, getDatabaseSchema, getPropertyValue, type RawNotionPage } from "@/lib/notion";
 import AutoDeduplicateView from "./AutoDeduplicateView";
-import { CustomDropdown, type CustomDropdownOption } from "./CustomDropdown";
+import { ConfigRow } from "./config-row/ConfigRow";
+import { Table, type TableColumn } from "./table/Table";
 import "./DatabaseSelector.css";
 
-interface Page {
-  id: string;
-  created_time: string;
-  title: string;
-  properties: Record<string, string | null>;
-}
-
+// Only these Notion property types produce values that can meaningfully be
+// compared for equality. Formula, rollup, relation, etc. are excluded because
+// their values are derived or complex and produce inconsistent duplicate signals.
 const DEDUPLICATABLE_TYPES = new Set([
   "title",
   "rich_text",
@@ -27,142 +43,43 @@ const DEDUPLICATABLE_TYPES = new Set([
 
 export default function DatabaseSelector({
   databases,
+  token,
 }: {
   databases: NotionDatabase[];
+  token: string;
 }) {
   const [selectedDatabaseId, setSelectedDatabaseId] = useState<string>("");
   const [properties, setProperties] = useState<NotionProperty[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [pages, setPages] = useState<Page[]>([]);
   const [schemaLoading, setSchemaLoading] = useState(false);
-  const [pagesLoading, setPagesLoading] = useState(false);
-  const [pagesLoaded, setPagesLoaded] = useState(0);
   const [error, setError] = useState<string>("");
   const [autoActionMode, setAutoActionMode] = useState<"archive" | "delete">("archive");
   const [autoExecutionMode, setAutoExecutionMode] = useState<"magically" | "manually">("magically");
   const [autoTiming, setAutoTiming] = useState<"now" | "later">("now");
   const [autoStarted, setAutoStarted] = useState(false);
   const [dryRunConfirmed, setDryRunConfirmed] = useState(false);
-  const [skipEmpty, setSkipEmpty] = useState(true);
-  const [previewPages, setPreviewPages] = useState<Page[]>([]);
+  const [skipEmpty, setSkipEmpty] = useState<"skip" | "allow">("skip");
+  const [previewPages, setPreviewPages] = useState<Array<{ id: string; title: string; properties: Record<string, string | null> }>>([]);
   const [previewHasMore, setPreviewHasMore] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewPage, setPreviewPage] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
 
-  const PREVIEW_PAGE_SIZE = 20;
+  // Consolidated fetch function: schema + preview in parallel, with shared error handling
+  const fetchSchemaAndPreview = useCallback(
+    async (databaseId: string) => {
+      setSchemaLoading(true);
+      setPreviewLoading(true);
 
-  // Refs for batching page accumulation to avoid O(n²) array spreads
-  const pagesAccRef = useRef<Page[]>([]);
-  const rafRef = useRef<number | null>(null);
+      // fetchedSchema is scoped to this call so the preview step can use
+      // the just-fetched data without referencing the `properties` state —
+      // which would put `properties` in the useCallback deps, recreate the
+      // callback every time schema loads, and trigger an infinite fetch loop.
+      let fetchedSchema: NotionProperty[] = [];
 
-  // Auto-select first database on mount
-  useEffect(() => {
-    if (databases.length > 0 && !selectedDatabaseId) {
-      handleDatabaseSelect(databases[0].id);
-    }
-  }, [databases, selectedDatabaseId]);
-
-  const loadPages = async (databaseId: string, propertyName: string) => {
-    setSelectedProperty(propertyName);
-    setPages([]);
-    setPagesLoaded(0);
-    setError("");
-    setPagesLoading(true);
-    pagesAccRef.current = [];
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-
-    try {
-      const response = await fetch(`/api/databases/${databaseId}/pages?fields=${encodeURIComponent(propertyName)}`);
-
-      if (!response.ok || !response.body) {
-        throw new Error("Failed to fetch pages");
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-
-          let msg: { type: string; pages?: Page[]; total?: number; message?: string };
-          try {
-            msg = JSON.parse(line);
-          } catch {
-            continue;
-          }
-
-          if (msg.type === "batch" && msg.pages) {
-            pagesAccRef.current.push(...msg.pages!);
-            setPagesLoaded(pagesAccRef.current.length);
-            if (rafRef.current === null) {
-              rafRef.current = requestAnimationFrame(() => {
-                setPages([...pagesAccRef.current]);
-                rafRef.current = null;
-              });
-            }
-          } else if (msg.type === "done") {
-            if (rafRef.current !== null) {
-              cancelAnimationFrame(rafRef.current);
-              rafRef.current = null;
-            }
-            setPages([...pagesAccRef.current]);
-            setPagesLoading(false);
-          } else if (msg.type === "error") {
-            throw new Error(msg.message ?? "Unknown error");
-          }
-        }
-      }
-    } catch (err) {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      setError(err instanceof Error ? err.message : "Failed to fetch pages");
-      setPagesLoading(false);
-    }
-  };
-
-  const handleDatabaseSelect = async (databaseId: string) => {
-    setSelectedDatabaseId(databaseId);
-    setSelectedProperty("");
-    setProperties([]);
-    setPages([]);
-    setPagesLoaded(0);
-    setError("");
-    setAutoStarted(false);
-    setDryRunConfirmed(false);
-    setPreviewPages([]);
-    setPreviewHasMore(false);
-    setPreviewPage(0);
-
-    if (!databaseId) return;
-
-    // Fetch schema and preview in parallel
-    setSchemaLoading(true);
-    setPreviewLoading(true);
-
-    const [schemaRes, previewRes] = await Promise.allSettled([
-      fetch(`/api/databases/${databaseId}/schema`),
-      fetch(`/api/databases/${databaseId}/preview`),
-    ]);
-
-    // Handle schema
-    if (schemaRes.status === "fulfilled" && schemaRes.value.ok) {
       try {
-        const { schema } = await schemaRes.value.json();
-        const deduplicatable = schema.filter((p: NotionProperty) =>
+        // Fetch schema first since preview normalization needs it
+        fetchedSchema = await getDatabaseSchema(databaseId, token);
+        const deduplicatable = fetchedSchema.filter((p: NotionProperty) =>
           DEDUPLICATABLE_TYPES.has(p.type)
         );
         setProperties(deduplicatable);
@@ -176,24 +93,101 @@ export default function DatabaseSelector({
         }
       } catch {
         setError("Failed to load database schema");
+      } finally {
+        setSchemaLoading(false);
       }
-    } else {
-      setError("Failed to load database schema");
-    }
-    setSchemaLoading(false);
 
-    // Handle preview
-    if (previewRes.status === "fulfilled" && previewRes.value.ok) {
+      // Fetch and normalize preview (non-fatal if it fails).
+      // Routed through the server proxy — Notion blocks CORS for integration tokens.
       try {
-        const data = await previewRes.value.json();
-        setPreviewPages(data.pages ?? []);
-        setPreviewHasMore(data.hasMore ?? false);
+        const previewRes = await fetch("/api/notion-proxy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            path: `/v1/databases/${databaseId}/query`,
+            method: "POST",
+            token,
+            body: { page_size: 20 },
+          }),
+        });
+        if (previewRes.ok) {
+          const previewData = await previewRes.json();
+          const rawPages: RawNotionPage[] = previewData.results ?? [];
+
+          // Use fetchedSchema (not the `properties` state) to avoid stale closure.
+          const propertyTypeMap = Object.fromEntries(
+            fetchedSchema.map((p) => [p.name, p.type])
+          );
+
+          const pages = rawPages.map((page) => {
+            // Extract title from properties
+            let title = "(Untitled)";
+            const titleEntry = Object.entries(page.properties || {}).find(
+              ([, prop]) => prop.type === "title"
+            );
+            if (titleEntry) {
+              title = titleEntry[1].title?.[0]?.plain_text ?? "(Untitled)";
+            }
+
+            // Normalize all properties
+            const normalizedProperties: Record<string, string | null> = {};
+            for (const [propName, propValue] of Object.entries(
+              page.properties || {}
+            )) {
+              normalizedProperties[propName] = getPropertyValue(
+                propValue,
+                propertyTypeMap[propName] ?? "unknown"
+              );
+            }
+
+            return {
+              id: page.id,
+              created_time: page.created_time,
+              title,
+              properties: normalizedProperties,
+            };
+          });
+
+          setPreviewPages(pages);
+          setPreviewHasMore(previewData.has_more ?? false);
+        }
       } catch {
-        // Preview failing is non-fatal
+        // Preview failure is non-fatal
+      } finally {
+        setPreviewLoading(false);
       }
-    }
-    setPreviewLoading(false);
+    },
+    [token]
+  );
+
+  const handleDatabaseSelect = async (databaseId: string) => {
+    setSelectedDatabaseId(databaseId);
+    setSelectedProperty("");
+    setProperties([]);
+    setError("");
+    setAutoStarted(false);
+    setDryRunConfirmed(false);
+    setIsRunning(false);
+    setPreviewPages([]);
+    setPreviewHasMore(false);
+
+    if (!databaseId) return;
+
+    await fetchSchemaAndPreview(databaseId);
   };
+
+  // Auto-select first database on mount
+  useEffect(() => {
+    if (databases.length > 0 && !selectedDatabaseId) {
+      setSelectedDatabaseId(databases[0].id);
+    }
+  }, [databases, selectedDatabaseId]);
+
+  // Fetch schema + preview whenever selectedDatabaseId changes
+  useEffect(() => {
+    if (!selectedDatabaseId) return;
+    fetchSchemaAndPreview(selectedDatabaseId);
+  }, [selectedDatabaseId, fetchSchemaAndPreview]);
 
   const handlePropertySelect = (propertyName: string) => {
     if (!propertyName || !selectedDatabaseId) return;
@@ -202,294 +196,114 @@ export default function DatabaseSelector({
     setDryRunConfirmed(false);
   };
 
-  useEffect(() => {
-    if (!pagesLoading) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [pagesLoading]);
-
+  // Build the ordered column list for the preview table. The currently selected
+  // dedup field is sorted first so it's immediately visible without scrolling.
   // Columns to show in the preview table: selected field first, then the rest
-  const previewColumns = useMemo(() =>
-    properties
-      .filter((p) => DEDUPLICATABLE_TYPES.has(p.type))
-      .sort((a, b) => {
-        if (a.name === selectedProperty) return -1;
-        if (b.name === selectedProperty) return 1;
-        return 0;
-      }),
+  const previewColumns = useMemo(
+    () =>
+      properties
+        .filter((p) => DEDUPLICATABLE_TYPES.has(p.type))
+        .sort((a, b) => {
+          if (a.name === selectedProperty) return -1;
+          if (b.name === selectedProperty) return 1;
+          return 0;
+        }),
     [properties, selectedProperty]
   );
 
-  const isProcessing = autoStarted;
-  const selectedDatabase = databases.find((db) => db.id === selectedDatabaseId);
+  // Transform previewPages into flat rows for the Table component
+  const tableRows = useMemo(() => {
+    return previewPages.map((page) => ({
+      id: page.id,
+      title: page.title,
+      ...page.properties,
+    }));
+  }, [previewPages]);
 
-  const hasContent =
-    (selectedDatabaseId && !autoStarted) ||
-    (selectedProperty && autoStarted);
-
-  // Dropdown options with descriptions
-  const databaseOptions: CustomDropdownOption[] = databases.map((db) => ({
-    value: db.id,
-    label: db.title[0]?.plain_text || "(Untitled)",
-  }));
-
-  const propertyOptions: CustomDropdownOption[] = properties.map((prop) => ({
-    value: prop.name,
-    label: prop.name,
-    description: prop.type,
-  }));
-
-  const actionModeOptions: CustomDropdownOption[] = [
-    {
-      value: "archive",
-      label: "archiving",
-      description: "Move to trash, recoverable for 30 days",
-    },
-    {
-      value: "delete",
-      label: "deleting",
-      description: "Permanently remove with no recovery",
-    },
-  ];
-
-  const executionModeOptions: CustomDropdownOption[] = [
-    {
-      value: "magically",
-      label: "magically",
-      description: "Auto-detect & remove duplicates automatically",
-    },
-    {
-      value: "manually",
-      label: "manually",
-      description: "Review duplicates before removing (coming soon)",
-      disabled: true,
-    },
-  ];
-
-  const timingOptions: CustomDropdownOption[] = [
-    {
-      value: "now",
-      label: "now",
-      description: "Execute immediately without preview",
-    },
-    {
-      value: "later",
-      label: "later",
-      description: "Show preview first, then confirm action",
-    },
-  ];
+  // Build table column definitions
+  const tableColumns = useMemo(() => {
+    const cols: TableColumn[] = [
+      { key: "title", label: "Title" },
+      ...previewColumns.map((col) => ({
+        key: col.name,
+        label: col.name,
+      })),
+    ];
+    return cols;
+  }, [previewColumns]);
 
   return (
     <div className="db-layout">
       {error && <div className="db-error">{error}</div>}
 
-      {/* ── Sentence-style configuration row ── */}
-      <div className="db-config-row">
-        <span className="db-config-text">Deduplicate</span>
+      {/* Config rows */}
+      <ConfigRow
+        databases={databases}
+        selectedDatabaseId={selectedDatabaseId}
+        onDatabaseSelect={handleDatabaseSelect}
+        properties={properties}
+        selectedProperty={selectedProperty}
+        onPropertySelect={handlePropertySelect}
+        schemaLoading={schemaLoading}
+        autoActionMode={autoActionMode}
+        onActionModeChange={setAutoActionMode}
+        autoExecutionMode={autoExecutionMode}
+        onExecutionModeChange={setAutoExecutionMode}
+        autoTiming={autoTiming}
+        onTimingChange={setAutoTiming}
+        onStart={() => { setAutoStarted(true); setIsRunning(true); }}
+        skipEmpty={skipEmpty}
+        onSkipEmptyChange={(value) => {
+          setSkipEmpty(value);
+          setAutoStarted(false);
+          setDryRunConfirmed(false);
+        }}
+        isRunning={isRunning}
+      />
 
-        {/* Database selector */}
-        <CustomDropdown
-          value={selectedDatabaseId}
-          onChange={(value) => handleDatabaseSelect(value)}
-          options={databaseOptions}
-          inline
-        />
 
-        <span className="db-config-text">using</span>
-
-        {/* Property selector */}
-        <CustomDropdown
-          value={selectedProperty}
-          onChange={(value) => handlePropertySelect(value)}
-          options={propertyOptions}
-          disabled={!selectedDatabaseId || schemaLoading}
-          inline
-        />
-
-        <span className="db-config-text">by</span>
-
-        {/* Archive/Delete selector */}
-        <CustomDropdown
-          value={autoActionMode}
-          onChange={(value) => setAutoActionMode(value as "archive" | "delete")}
-          options={actionModeOptions}
-          disabled={!selectedProperty}
-          inline
-        />
-
-        {/* Execution mode selector */}
-        <CustomDropdown
-          value={autoExecutionMode}
-          onChange={(value) => setAutoExecutionMode(value as "magically" | "manually")}
-          options={executionModeOptions}
-          disabled={!selectedProperty}
-          inline
-        />
-
-        {/* Timing selector */}
-        <CustomDropdown
-          value={autoTiming}
-          onChange={(value) => setAutoTiming(value as "now" | "later")}
-          options={timingOptions}
-          disabled={!selectedProperty}
-          inline
-        />
-
-        {/* Checkmark button */}
-        <button
-          onClick={() => setAutoStarted(true)}
-          className="db-config-checkmark"
-          disabled={!selectedDatabaseId || !selectedProperty}
-          title="Start deduplication process"
-        >
-          ✓
-        </button>
-
-        {/* Schema loading indicator */}
-        {schemaLoading && <div className="db-spinner db-spinner--sm" />}
-      </div>
-
-      {/* Skip empty checkbox */}
-      {selectedProperty && !autoStarted && (
-        <label className="db-skip-empty">
-          <input
-            type="checkbox"
-            checked={skipEmpty}
-            onChange={(e) => {
-              setSkipEmpty(e.target.checked);
-              setAutoStarted(false);
-              setDryRunConfirmed(false);
+      {/* Preview table shown only before a run starts */}
+      {!autoStarted && selectedDatabaseId && (
+        <div className="db-main-content">
+          <Table
+            columns={tableColumns}
+            rows={tableRows}
+            loading={previewLoading}
+            hasMore={previewHasMore}
+            pageSize={20}
+            activeColumn={selectedProperty || "title"}
+            cardHeader={{
+              label: "Preview",
+              showRowCount: true,
+              showSpinner: true,
             }}
+            rowKey={(row) => (row.id as string) || (row.title as string)}
+            skeletonRows={5}
           />
-          <span>
-            Skip pages where <strong>{selectedProperty}</strong> is empty
-            <span className="db-mode-hint"> — prevents blank values from matching each other</span>
-          </span>
-        </label>
+        </div>
       )}
 
-      {/* ── Main content area ── */}
-      <div className="db-main-content">
-
-        {/* Preview table — always shown */}
-        {selectedDatabaseId && (
-          <div className="db-card db-preview-card">
-            <div className="db-preview-header">
-              <span className="db-card-label" style={{ marginBottom: 0 }}>
-                Preview
-              </span>
-              {previewLoading && <div className="db-spinner db-spinner--sm" />}
-              {!previewLoading && previewPages.length > 0 && (
-                <span className="db-preview-count">
-                  {previewPages.length} pages
-                  {previewHasMore ? " from many" : ""}
-                </span>
-              )}
-            </div>
-            <div className="db-preview-scroll">
-              <table className="db-preview-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    {previewColumns.map((col) => (
-                      <th
-                        key={col.name}
-                        className={col.name === selectedProperty ? "db-preview-th--active" : ""}
-                      >
-                        {col.name}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewLoading || previewPages.length === 0 ? (
-                    /* Skeleton loading rows */
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <tr key={`skeleton-${i}`} className="db-preview-row--skeleton">
-                        <td className="db-preview-title">
-                          <div className="db-skeleton" style={{ width: "60%", height: "1rem" }} />
-                        </td>
-                        {previewColumns.map((col) => (
-                          <td key={col.name} className="db-preview-cell">
-                            <div className="db-skeleton" style={{ width: "80%", height: "0.875rem" }} />
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  ) : (
-                    /* Actual preview rows */
-                    (() => {
-                      const totalPages = Math.ceil(previewPages.length / PREVIEW_PAGE_SIZE);
-                      const start = previewPage * PREVIEW_PAGE_SIZE;
-                      const visibleRows = previewPages.slice(start, start + PREVIEW_PAGE_SIZE);
-                      return visibleRows.map((page) => (
-                        <tr key={page.id}>
-                          <td className="db-preview-title">{page.title}</td>
-                          {previewColumns.map((col) => (
-                            <td
-                              key={col.name}
-                              className={`db-preview-cell${col.name === selectedProperty ? " db-preview-cell--active" : ""}${!page.properties[col.name] ? " db-preview-cell--empty" : ""}`}
-                            >
-                              {page.properties[col.name] ?? <span className="db-preview-empty">—</span>}
-                            </td>
-                          ))}
-                        </tr>
-                      ));
-                    })()
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {previewPages.length > 0 && !previewLoading && (() => {
-              const totalPages = Math.ceil(previewPages.length / PREVIEW_PAGE_SIZE);
-              return totalPages > 1 ? (
-                <div className="db-preview-pagination">
-                  <button
-                    className="db-preview-page-btn"
-                    disabled={previewPage === 0}
-                    onClick={() => setPreviewPage((p) => p - 1)}
-                  >
-                    ‹ Prev
-                  </button>
-                  <span className="db-preview-page-info">
-                    {previewPage * PREVIEW_PAGE_SIZE + 1}–
-                    {Math.min((previewPage + 1) * PREVIEW_PAGE_SIZE, previewPages.length)} of{" "}
-                    {previewPages.length}
-                  </span>
-                  <button
-                    className="db-preview-page-btn"
-                    disabled={previewPage >= totalPages - 1}
-                    onClick={() => setPreviewPage((p) => p + 1)}
-                  >
-                    Next ›
-                  </button>
-                </div>
-              ) : null;
-            })()}
-          </div>
-        )}
-
-        {/* Auto-deduplicate live view */}
-        {autoStarted && (
-          <AutoDeduplicateView
-            key={dryRunConfirmed ? "real-run" : "dry-run"}
-            databaseId={selectedDatabaseId}
-            databaseName={
-              databases.find((db) => db.id === selectedDatabaseId)?.title?.[0]?.plain_text ??
-              "Untitled database"
-            }
-            fieldName={selectedProperty}
-            mode={autoActionMode}
-            skipEmpty={skipEmpty}
-            dryRun={autoTiming === "later" && !dryRunConfirmed}
-            onConfirm={() => setDryRunConfirmed(true)}
-          />
-        )}
-
-      </div>
+      {/* AutoDeduplicateView lives at db-layout level so its stats bar sits
+          directly below the config row, not nested inside db-main-content. */}
+      {autoStarted && (
+        // key forces a full unmount+remount when transitioning from dry-run
+        // preview to the confirmed live run, resetting all stream/ref state.
+        <AutoDeduplicateView
+          key={dryRunConfirmed ? "real-run" : "dry-run"}
+          databaseId={selectedDatabaseId}
+          databaseName={
+            databases.find((db) => db.id === selectedDatabaseId)?.title?.[0]?.plain_text ??
+            "Untitled database"
+          }
+          fieldName={selectedProperty}
+          mode={autoActionMode}
+          skipEmpty={skipEmpty === "skip"}
+          dryRun={autoTiming === "later" && !dryRunConfirmed}
+          onConfirm={() => setDryRunConfirmed(true)}
+          onPhaseChange={(p) => setIsRunning(p === "running" || p === "paused")}
+          token={token}
+        />
+      )}
     </div>
   );
 }

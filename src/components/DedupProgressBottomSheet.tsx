@@ -1,3 +1,19 @@
+// DedupProgressBottomSheet.tsx
+//
+// Persistent floating progress indicator shown in the footer during and after a
+// deduplication run. It has two visual states:
+//   - Collapsed ("island"): a compact pill with a ring-progress SVG and a one-line
+//     summary. Clicking expands it.
+//   - Expanded ("sheet"): an overlay panel with full stats, metadata, elapsed time,
+//     and action buttons (pause/resume, view progress, dismiss).
+//
+// The component reads shared run state from DedupProvider (useDedup) and is only
+// rendered when a run is active (isActive === true). It's mounted once in Footer
+// so it persists across page navigations without losing state.
+//
+// The "View progress" link is hidden when the user is already on the /duplicate page
+// to avoid showing a no-op navigation button.
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -12,10 +28,14 @@ interface RingProps {
   phase: string;
 }
 
+// SVG ring that shows dedup completion as a circular progress arc.
+// While scanning (duplicatesFound still 0), it renders in indeterminate/spin mode
+// via a CSS animation class rather than trying to show meaningless 0% progress.
 function RingProgress({ actioned, duplicatesFound, phase }: RingProps) {
   const r = 13;
   const circ = 2 * Math.PI * r;
 
+  // Switch to indeterminate spinning animation while we don't yet know the total
   const indeterminate = phase === "running" && duplicatesFound === 0;
 
   const pct =
@@ -143,6 +163,9 @@ export default function DedupProgressBottomSheet() {
     : phase === "preview" ? "Preview"
     : "Error";
 
+  // Pick the most meaningful number to display prominently:
+  // - Once duplicates are found, show how many have been actioned (the key progress metric).
+  // - Before any duplicates are found, show pages scanned (the only meaningful number).
   const heroNumber = stats.duplicatesFound > 0 ? stats.actioned : stats.scanned;
   const heroLabel  = stats.duplicatesFound > 0 ? verb : "scanned";
 

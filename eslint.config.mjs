@@ -25,6 +25,17 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  // Disable setState-in-effect for legitimate initialization patterns
+  {
+    files: [
+      "src/components/DatabaseSelector.tsx",
+      "src/components/DatabasePreviewTable.tsx",
+      "src/components/table/Table.tsx",
+    ],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
   // Disable unused var warnings for components with optional props
   {
     files: [

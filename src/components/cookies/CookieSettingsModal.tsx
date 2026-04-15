@@ -1,3 +1,17 @@
+// CookieSettingsModal.tsx
+//
+// Granular cookie preference editor rendered as a BottomSheet. Shows one row per
+// cookie category:
+//   - Functional: always-on (toggle is rendered as disabled/decorative).
+//   - Analytics: user-toggleable.
+//
+// Preferences are loaded from localStorage via getCookiePreferences on mount and
+// only written back when the user explicitly clicks "Save preferences". Closing
+// the sheet without saving discards in-flight toggle changes.
+//
+// The `mounted` guard (same pattern as CookieConsentBanner) prevents rendering
+// during SSR to avoid hydration mismatches from localStorage access.
+
 "use client";
 
 import React, { useEffect, useState } from "react";

@@ -1,3 +1,22 @@
+// BottomSheet.tsx
+//
+// Generic modal sheet that slides up from the bottom of the viewport. Used as
+// the base layer for ThemeSettingsModal, CookieSettingsModal, and the cookie
+// consent banner.
+//
+// Accessibility:
+//   - role="dialog" + aria-modal="true" + aria-labelledby on the inner panel so
+//     screen readers correctly announce it as a dialog.
+//   - The drag handle div is purely decorative (no aria role) and does not
+//     implement actual drag-to-dismiss behaviour.
+//
+// Overlay click-to-close: handleOverlayClick uses e.target === e.currentTarget
+// to distinguish clicks directly on the backdrop from clicks that bubble up from
+// the sheet content — only the former closes the sheet.
+//
+// Scroll lock: body overflow is set to "hidden" while open to prevent background
+// content from scrolling behind the sheet.
+
 "use client";
 
 import React, { useEffect } from "react";

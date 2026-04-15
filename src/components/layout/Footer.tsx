@@ -1,3 +1,15 @@
+// Footer.tsx
+//
+// Application footer that houses:
+//   - Copyright notice
+//   - Theme settings button (opens ThemeSettingsModal)
+//   - Cookie settings button (opens CookieSettingsModal)
+//   - DedupProgressBottomSheet — the persistent floating dedup progress indicator
+//
+// DedupProgressBottomSheet is rendered here (rather than in the page layout)
+// so it stays mounted across client-side navigations and doesn't lose its state
+// when the user moves between pages during an active run.
+
 "use client";
 
 import React, { useState } from "react";

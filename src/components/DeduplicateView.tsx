@@ -1,6 +1,29 @@
+// DeduplicateView.tsx
+//
+// Manual deduplication UI — the older, user-driven flow (as opposed to
+// AutoDeduplicateView which runs automatically). The parent streams pages
+// incrementally via the `pages` prop (e.g. from a pagination API); this
+// component groups them into duplicate sets in real time without re-processing
+// already-seen pages.
+//
+// Key design decisions:
+// - groupsMapRef + processedCountRef enable incremental grouping: only newly
+//   appended pages are processed on each render, avoiding O(n²) re-grouping as
+//   the page list grows during streaming.
+// - rebuildTimerRef debounces the expensive re-sort + setState call at 300ms so
+//   rapid page additions don't cause a render per page.
+// - While isLoading is true, the group list auto-jumps to the last page so the
+//   user sees incoming duplicates as they arrive.
+// - keepSelections (Map<fieldValue, pageId>) records which page to keep for each
+//   duplicate group; the default is always the oldest page (pages[0] after sort).
+// - excludedIds allows individual non-keep pages to be opt-out of the action
+//   without changing the keep selection.
+
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { archivePage, deletePage } from "@/lib/notion";
+import { Table, type TableColumn } from "./table/Table";
 import "./DeduplicateView.css";
 
 interface Page {
@@ -17,6 +40,15 @@ interface DuplicateGroup {
 
 type Mode = "archive" | "delete";
 
+interface DedupeTableRow extends Record<string, unknown> {
+  title: { _pageId: string; _title: string };
+  created_time: string;
+  action: null;
+  _pageId: string;
+  _isKept: boolean;
+  _isExcluded: boolean;
+}
+
 const GROUPS_PER_PAGE = 10;
 
 function notionPageUrl(id: string) {
@@ -28,11 +60,13 @@ export default function DeduplicateView({
   fieldName,
   isLoading = false,
   skipEmpty = false,
+  token,
 }: {
   pages: Page[];
   fieldName: string;
   isLoading?: boolean;
   skipEmpty?: boolean;
+  token: string;
 }) {
   const [keepSelections, setKeepSelections] = useState<Map<string, string>>(new Map());
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
@@ -47,6 +81,8 @@ export default function DeduplicateView({
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const rebuildTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Guard against accidental navigation while an archive/delete POST is in-flight;
+  // the browser will prompt the user to confirm leaving the page.
   useEffect(() => {
     if (!acting) return;
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
@@ -61,7 +97,11 @@ export default function DeduplicateView({
     setDuplicateGroups([]);
   }, [fieldName, skipEmpty]);
 
-  // Rebuild duplicate groups from the map (debounced)
+  // Rebuild duplicate groups from the map (debounced).
+  // Only groups with 2+ pages qualify as duplicates. Within each group, pages are
+  // sorted oldest-first (created_time ascending) so pages[0] is the default "keep".
+  // Groups are then sorted largest-first so the most impactful duplicates appear at
+  // the top of the list.
   const rebuildGroups = () => {
     const groups = Array.from(groupsMapRef.current.entries())
       .filter(([, g]) => g.length > 1)
@@ -103,6 +143,8 @@ export default function DeduplicateView({
     (groupPage + 1) * GROUPS_PER_PAGE
   );
 
+  // Returns the page ID the user wants to keep for a group, falling back to
+  // the oldest page (pages[0]) if the user hasn't made an explicit selection yet.
   const effectiveKeepId = (group: DuplicateGroup) =>
     keepSelections.get(group.value) ?? group.pages[0].id;
 
@@ -113,6 +155,8 @@ export default function DeduplicateView({
       .map((p) => p.id);
   }), [duplicateGroups, keepSelections, excludedIds]);
 
+  // When the user picks a new "keep" page, also clear any per-page exclusions in
+  // that group so the newly revealed delete targets start in the default checked state.
   const handleKeepChange = (group: DuplicateGroup, pageId: string) => {
     setKeepSelections((prev) => new Map(prev).set(group.value, pageId));
     setExcludedIds((prev) => {
@@ -134,14 +178,29 @@ export default function DeduplicateView({
   const handleAction = async () => {
     setActing(true);
     try {
-      const res = await fetch("/api/deduplicate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageIds: pageIdsToAction, mode }),
+      let actionedCount = 0;
+      let errorCount = 0;
+      const queue = [...pageIdsToAction];
+
+      // 3 concurrent workers — same concurrency as the server route
+      const workers = Array.from({ length: Math.min(3, queue.length) }, async () => {
+        while (queue.length > 0) {
+          const pageId = queue.shift()!;
+          try {
+            if (mode === "archive") {
+              await archivePage(pageId, token);
+            } else {
+              await deletePage(pageId, token);
+            }
+            actionedCount++;
+          } catch {
+            errorCount++;
+          }
+        }
       });
-      if (!res.ok) throw new Error("Request failed");
-      const data = await res.json();
-      setResult({ actioned: data.actioned, errors: data.errors, mode });
+
+      await Promise.all(workers);
+      setResult({ actioned: actionedCount, errors: errorCount, mode });
     } catch (err) {
       alert(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -196,74 +255,92 @@ export default function DeduplicateView({
       <div className="dedup-groups">
         {visibleGroups.map((group) => {
           const keepId = effectiveKeepId(group);
+          const userSelected = keepSelections.has(group.value);
+
+          const columns: TableColumn[] = [
+            {
+              key: "title",
+              label: "Title",
+              format: (value): ReactNode => {
+                const titleData = value as DedupeTableRow["title"];
+                return (
+                  <a
+                    href={notionPageUrl(titleData._pageId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="dedup-page-link"
+                  >
+                    {titleData._title || "(Untitled)"}
+                  </a>
+                );
+              },
+            },
+            {
+              key: "created_time",
+              label: "Created",
+              align: "left",
+              format: (value): ReactNode => new Date(value as string).toLocaleDateString(),
+            },
+            {
+              key: "action",
+              label: "Action",
+              format: (_, row): ReactNode => {
+                const dedupeRow = row as unknown as DedupeTableRow;
+                return (
+                  <div className="dedup-action-cell">
+                    <label className="dedup-radio-label">
+                      <input
+                        type="radio"
+                        name={`keep-${group.value}`}
+                        checked={dedupeRow._isKept}
+                        onChange={() => handleKeepChange(group, dedupeRow._pageId)}
+                      />
+                      <span className={`badge ${dedupeRow._isKept ? "badge-keep" : "badge-delete"}`}>
+                        {dedupeRow._isKept ? "Keep" : "Delete"}
+                      </span>
+                    </label>
+                    {!dedupeRow._isKept && (
+                      <input
+                        type="checkbox"
+                        className="dedup-checkbox"
+                        checked={!dedupeRow._isExcluded}
+                        title={dedupeRow._isExcluded ? "Skipped — won't be actioned" : "Will be actioned"}
+                        onChange={(e) =>
+                          handleExcludeToggle(dedupeRow._pageId, !e.target.checked)
+                        }
+                      />
+                    )}
+                  </div>
+                );
+              },
+            },
+          ];
+
+          const tableRows = group.pages.map((page): DedupeTableRow => ({
+            title: { _pageId: page.id, _title: page.title },
+            created_time: page.created_time,
+            action: null,
+            _pageId: page.id,
+            _isKept: page.id === keepId,
+            _isExcluded: excludedIds.has(page.id),
+          }));
+
           return (
             <div key={group.value} className="dedup-group">
               <div className="dedup-group-header">
                 <p className="dedup-group-value">{group.value || "(empty value)"}</p>
                 <p className="dedup-group-count">{group.pages.length} pages</p>
               </div>
-              <div className="dedup-table-scroll">
-                <table className="dedup-table">
-                  <thead>
-                    <tr>
-                      <th>Title</th>
-                      <th>Created</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.pages.map((page) => {
-                      const isKept = page.id === keepId;
-                      const isExcluded = excludedIds.has(page.id);
-                      const userSelected = keepSelections.has(group.value);
-                      return (
-                        <tr
-                          key={page.id}
-                          className={userSelected ? (isKept ? "dedup-row-keep" : "dedup-row-delete") : ""}
-                        >
-                          <td>
-                            <a
-                              href={notionPageUrl(page.id)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="dedup-page-link"
-                            >
-                              {page.title || "(Untitled)"}
-                            </a>
-                          </td>
-                          <td className="mono">
-                            {new Date(page.created_time).toLocaleDateString()}
-                          </td>
-                          <td className="dedup-action-cell">
-                            <label className="dedup-radio-label">
-                              <input
-                                type="radio"
-                                name={`keep-${group.value}`}
-                                checked={isKept}
-                                onChange={() => handleKeepChange(group, page.id)}
-                              />
-                              <span className={`badge ${isKept ? "badge-keep" : "badge-delete"}`}>
-                                {isKept ? "Keep" : "Delete"}
-                              </span>
-                            </label>
-                            {!isKept && (
-                              <input
-                                type="checkbox"
-                                className="dedup-checkbox"
-                                checked={!isExcluded}
-                                title={isExcluded ? "Skipped — won't be actioned" : "Will be actioned"}
-                                onChange={(e) =>
-                                  handleExcludeToggle(page.id, !e.target.checked)
-                                }
-                              />
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <Table
+                columns={columns}
+                rows={tableRows}
+                rowKey={(row) => (row as unknown as DedupeTableRow)._pageId}
+                rowClassName={(row) => {
+                  const dedupeRow = row as unknown as DedupeTableRow;
+                  return userSelected ? (dedupeRow._isKept ? "dedup-row-keep" : "dedup-row-delete") : "";
+                }}
+                className="dedup-table"
+              />
             </div>
           );
         })}

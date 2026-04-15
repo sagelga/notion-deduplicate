@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx *)"
+      "Bash(npx *)",
+      "Bash(mkdir *)",
+      "Bash(mv *)",
+      "Bash(kill *)",
+      "Bash(true)",
+      "Bash(git add *)"
     ]
-  }
+  },
+  "$version": 3
 }
