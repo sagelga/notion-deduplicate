@@ -1,0 +1,190 @@
+/* ──────────────────────────────────────────────────────────────
+   Notification.css — toast-style notification component
+   Uses --nd-* design tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Base notification ── */
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--nd-radius-lg);
+  background: var(--nd-bg);
+  border: 1px solid var(--nd-divider);
+  box-shadow: var(--nd-shadow-lg);
+  max-width: 380px;
+  width: 100%;
+  pointer-events: all;
+  position: relative;
+
+  /* Hidden state (before entrance) */
+  opacity: 0;
+  transform: translateX(20px);
+  transition:
+    opacity 0.28s ease-out,
+    transform 0.28s ease-out;
+}
+
+/* Visible state */
+.notification--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Exiting state */
+.notification--exiting {
+  opacity: 0;
+  transform: translateX(20px);
+  transition:
+    opacity 0.28s ease-in,
+    transform 0.28s ease-in;
+}
+
+/* ── Position variants ── */
+.notification--top-right {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 3000;
+}
+
+.notification--bottom-right {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1rem;
+  z-index: 3000;
+}
+
+/* ── Icon ── */
+.notification__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 0.125rem;
+}
+
+.notification--info .notification__icon {
+  color: var(--nd-blue);
+}
+
+.notification--success .notification__icon {
+  color: var(--nd-ok);
+}
+
+.notification--warning .notification__icon {
+  color: var(--nd-accent);
+}
+
+.notification--error .notification__icon {
+  color: var(--nd-danger);
+}
+
+/* ── Content ── */
+.notification__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--nd-text);
+  line-height: 1.4;
+}
+
+.notification__message {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--nd-text-dim);
+  line-height: 1.45;
+}
+
+/* ── Actions area ── */
+.notification__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* ── Action button ── */
+.notification__action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--nd-radius);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.notification--info .notification__action-btn {
+  color: var(--nd-blue);
+}
+
+.notification--info .notification__action-btn:hover {
+  background: var(--nd-blue-bg);
+}
+
+.notification--success .notification__action-btn {
+  color: var(--nd-ok);
+}
+
+.notification--success .notification__action-btn:hover {
+  background: var(--nd-ok-bg);
+}
+
+.notification--warning .notification__action-btn {
+  color: var(--nd-accent);
+}
+
+.notification--warning .notification__action-btn:hover {
+  background: var(--nd-accent-bg);
+}
+
+.notification--error .notification__action-btn {
+  color: var(--nd-danger);
+}
+
+.notification--error .notification__action-btn:hover {
+  background: var(--nd-danger-bg);
+}
+
+/* ── Close button ── */
+.notification__close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--nd-text-faint);
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--nd-radius);
+  transition: background 0.15s, color 0.15s;
+}
+
+.notification__close:hover {
+  background: var(--nd-bg-hover);
+  color: var(--nd-text);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .notification {
+    max-width: calc(100vw - 2rem);
+  }
+
+  .notification--top-right,
+  .notification--bottom-right {
+    left: 1rem;
+    right: 1rem;
+  }
+}

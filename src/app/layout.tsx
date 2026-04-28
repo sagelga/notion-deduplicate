@@ -46,6 +46,7 @@ export const metadata: Metadata = {
 
 const NAV_LINKS: NavItem[] = [
   { label: "Duplicate", href: "/duplicate" },
+  { label: "Agenda", href: "/agenda" },
   { label: "Course", href: "/course" },
   { label: "Blog", href: "/blog" },
   { label: "Marketplace", href: "/marketplace" },
@@ -84,9 +85,7 @@ export default function RootLayout({
             <main className="page-content">
               {children}
             </main>
-            <Footer
-              copyrightStart={2025}
-            />
+            <Footer />
             <CookieConsentBanner />
           </DedupProvider>
         </ThemeProvider>

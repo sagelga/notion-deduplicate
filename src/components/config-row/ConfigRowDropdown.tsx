@@ -69,6 +69,7 @@ export function ConfigRowDropdown({
         type="button"
       >
         <span className="config-row-dropdown-label">{displayLabel}</span>
+        <span className="config-row-dropdown-arrow">▾</span>
       </button>
 
       {isOpen && !disabled && (

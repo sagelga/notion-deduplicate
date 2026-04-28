@@ -12,6 +12,9 @@
 
 import type { Stats, Phase } from "./dedup-types";
 
+// Filter key passed when a stat item is clicked. null means "reset filter / show all".
+export type StatFilterKey = "all" | "pending" | "kept" | "actioned" | "errors" | "skipped";
+
 interface DedupStatsBarProps {
   stats: Stats;
   verb: string;
@@ -19,31 +22,37 @@ interface DedupStatsBarProps {
   activeStage: string;
   dryRun: boolean;
   onPause: () => void;
+  /** Called when the user clicks a stat item to filter the results table. */
+  onStatClick: (key: StatFilterKey) => void;
 }
 
-export function DedupStatsBar({ stats, verb, phase, activeStage, dryRun, onPause }: DedupStatsBarProps) {
+export function DedupStatsBar({ stats, verb, phase, activeStage, dryRun, onPause, onStatClick }: DedupStatsBarProps) {
   return (
     <div className="auto-dedup-stats">
-      <div className="auto-dedup-stat">
+      <button className="auto-dedup-stat" onClick={() => onStatClick("all")} type="button">
         <span className="auto-stat-value">{stats.scanned}</span>
         <span className="auto-stat-label">scanned</span>
-      </div>
-      <div className="auto-dedup-stat">
+      </button>
+      <button className="auto-dedup-stat" onClick={() => onStatClick("pending")} type="button">
         <span className="auto-stat-value">{stats.duplicatesFound}</span>
-        <span className="auto-stat-label">duplicates</span>
-      </div>
-      <div className="auto-dedup-stat">
+        <span className="auto-stat-label">to remove</span>
+      </button>
+      <button className="auto-dedup-stat" onClick={() => onStatClick("actioned")} type="button">
         <span className={`auto-stat-value ${stats.actioned > 0 ? "val-success" : ""}`}>
           {stats.actioned}
         </span>
         <span className="auto-stat-label">{verb}</span>
-      </div>
-      <div className="auto-dedup-stat">
+      </button>
+      <button className="auto-dedup-stat" onClick={() => onStatClick("skipped")} type="button">
+        <span className="auto-stat-value">–</span>
+        <span className="auto-stat-label">skipped</span>
+      </button>
+      <button className="auto-dedup-stat" onClick={() => onStatClick("errors")} type="button">
         <span className={`auto-stat-value ${stats.errors > 0 ? "val-error" : ""}`}>
           {stats.errors}
         </span>
         <span className="auto-stat-label">errors</span>
-      </div>
+      </button>
 
       {(phase === "running" || phase === "paused") && (
         <div className="auto-spinner-group">

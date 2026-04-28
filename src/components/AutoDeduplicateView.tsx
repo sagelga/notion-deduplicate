@@ -21,7 +21,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDedup } from "@/hooks/useDedup";
 import { useAutoDeduplicate } from "@/hooks/useAutoDeduplicate";
 import type { Mode, Phase, Stats } from "./dedup-types";
-import { DedupStatsBar } from "./DedupStatsBar";
+import { DedupStatsBar, type StatFilterKey } from "./DedupStatsBar";
 import { DedupScanProgress } from "./DedupScanProgress";
 import { DedupResultsTable } from "./DedupResultsTable";
 import { DedupPreviewConfirm } from "./DedupPreviewConfirm";
@@ -61,6 +61,7 @@ export default function AutoDeduplicateView({
   const [stats, setStats] = useState<Stats>({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0 });
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [activeStage] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<StatFilterKey>("all");
 
   // Call the hook — runs 3-stage pipeline in browser
   const {
@@ -155,6 +156,10 @@ export default function AutoDeduplicateView({
     }
   }, [pipelinePhase, dedupSetErrorMessage]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleStatClick = (key: StatFilterKey) => {
+    setStatusFilter(key);
+  };
+
   const handlePause = () => {
     const nowPaused = !localPausedRef.current;
     localPausedRef.current = nowPaused;
@@ -223,6 +228,17 @@ export default function AutoDeduplicateView({
     [logs]
   );
 
+  // Filter rows by status when user clicks a stat in the stats bar.
+  const filteredRows = useMemo(() => {
+    if (statusFilter === "all") return rows;
+    if (statusFilter === "pending") return rows.filter((r) => r.status === "pending");
+    if (statusFilter === "kept") return rows.filter((r) => r.status === "kept");
+    if (statusFilter === "actioned") return rows.filter((r) => r.status === "deleted" || r.status === "archived");
+    if (statusFilter === "errors") return rows.filter((r) => r.status === "error");
+    if (statusFilter === "skipped") return rows.filter((r) => r.status === "skipped");
+    return rows;
+  }, [rows, statusFilter]);
+
   return (
     <div className="auto-dedup-wrapper">
       <DedupStatsBar
@@ -232,6 +248,7 @@ export default function AutoDeduplicateView({
         activeStage={activeStage}
         dryRun={dryRun}
         onPause={handlePause}
+        onStatClick={handleStatClick}
       />
 
       {phase === "error" && <div className="auto-dedup-error">{errorMessage}</div>}
@@ -248,7 +265,7 @@ export default function AutoDeduplicateView({
 
       {dryRun && phase === "running" && <DedupScanProgress stats={stats} />}
 
-      <DedupResultsTable rows={rows} fieldName={fieldName} dryRun={dryRun} phase={phase} />
+      <DedupResultsTable rows={filteredRows} fieldName={fieldName} dryRun={dryRun} phase={phase} />
 
       {phase === "preview" && (
         <DedupPreviewConfirm stats={stats} mode={mode} onConfirm={onConfirm} />

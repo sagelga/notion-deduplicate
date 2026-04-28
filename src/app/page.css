@@ -1,170 +1,209 @@
 /* ──────────────────────────────────────────────────────────────
    page.css — Landing / home page (src/app/page.tsx)
-   Purpose: Layout and typography for the public-facing landing page,
-   including the hero section, tool card grid, and "get started" flow.
-
-   Conventions:
-   - Max content width of 860px, centred with auto margins.
-   - Two-column tool grid collapses to single column below 540px.
-   - All colours reference design tokens from globals.css.
-   - The hover ring on .landing-tool-card uses a hardcoded rgba value
-     because the accent colour is not available as an rgb triplet token.
+   Two-column hero (S1 hi-fi design) + tools grid.
    ────────────────────────────────────────────────────────────── */
 
 .landing-wrapper {
-  max-width: 860px;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 4rem 1.5rem 5rem;
+  padding: 3rem 1.5rem 5rem;
   display: flex;
   flex-direction: column;
-  gap: 3.5rem;
+  gap: 4rem;
 }
 
-/* Hero */
+/* ── Hero ── */
 .landing-hero {
-  text-align: center;
-  padding: 1rem 0 0.5rem;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 48px;
+  align-items: center;
+  min-height: 480px;
+}
+
+.landing-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.landing-eyebrow {
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-text-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 18px;
 }
 
 .landing-hero-title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--color-text);
-  letter-spacing: -0.04em;
-  margin: 0 0 0.75rem;
-  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: var(--nd-text);
+  margin: 0 0 14px;
+  line-height: 1.15;
 }
 
 .landing-hero-subtitle {
-  color: var(--color-text-secondary);
-  font-size: 1.0625rem;
-  margin: 0;
-  line-height: 1.6;
-  max-width: 480px;
-  margin: 0 auto;
+  color: var(--nd-text-dim);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  max-width: 440px;
+  margin: 0 0 28px;
 }
 
-.landing-how-it-works {
+/* CTA row */
+.landing-cta-row {
   display: flex;
+  align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 0 1.5rem;
-  list-style: decimal;
-  padding: 0.75rem 0 0;
-  margin: 0 auto;
-  max-width: 520px;
-  font-size: 0.875rem;
-  color: var(--color-muted);
-  line-height: 1.6;
+  margin-bottom: 36px;
+}
+
+.landing-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--nd-text);
+  color: var(--nd-bg);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 9px 18px;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: opacity 0.1s;
+}
+
+.landing-cta-btn:hover {
+  opacity: 0.88;
+  text-decoration: none;
 }
 
 .landing-trust-note {
-  font-size: 0.8125rem;
-  color: var(--color-muted);
-  margin: 0;
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-text-faint);
 }
 
-/* Section label */
-.landing-section-label {
-  font-size: 0.8125rem;
+/* How it works steps */
+.landing-how-it-works {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--nd-divider);
+  padding-top: 22px;
+}
+
+.landing-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 16px;
+}
+
+.landing-step-n {
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  color: var(--nd-accent);
+  margin-bottom: 2px;
+}
+
+.landing-step-title {
+  font-size: 13.5px;
   font-weight: 500;
-  color: var(--color-muted);
+  color: var(--nd-text);
+}
+
+.landing-step-sub {
+  font-size: 12px;
+  color: var(--nd-text-faint);
+  line-height: 1.4;
+}
+
+/* Right column: illustration */
+.landing-hero-right {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+/* ── Other tools grid ── */
+.landing-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--nd-text-faint);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin: 0 0 1rem;
+  margin: 0 0 12px;
 }
 
-/* Tools grid — fixed 2-column layout rather than auto-fill so cards
-   always align symmetrically. Collapses to a single column at 540px
-   where two columns become too narrow to display descriptions legibly. */
 .landing-tools-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-
-@media (max-width: 540px) {
-  .landing-tools-grid {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
 .landing-tool-card {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  padding: 1.25rem 1.375rem;
-  border: 1px solid var(--color-rim);
-  border-radius: 6px;
-  background: var(--color-surface);
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius-md);
+  background: var(--nd-bg-soft);
   text-decoration: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.12s, background 0.12s;
 }
 
 .landing-tool-card:hover {
-  border-color: var(--color-accent);
-  /* Focus ring uses the raw accent hex because --color-accent is not
-     available as a triplet; 0.08 alpha keeps it subtle, not distracting. */
-  box-shadow: 0 0 0 3px rgba(35, 131, 226, 0.08);
+  border-color: var(--nd-divider-strong);
+  background: var(--nd-bg-hover);
   text-decoration: none;
 }
 
 .landing-tool-name {
-  font-size: 0.9375rem;
+  font-size: 13.5px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--nd-text);
 }
 
 .landing-tool-desc {
-  font-size: 0.8125rem;
-  color: var(--color-muted);
+  font-size: 12px;
+  color: var(--nd-text-faint);
   line-height: 1.5;
 }
 
-/* Get started */
-.landing-start {
-  max-width: 440px;
-}
+/* ── Responsive ── */
+@media (max-width: 680px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    gap: 32px;
+  }
 
-.landing-connected {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
+  .landing-hero-right {
+    order: -1;
+  }
 
-.landing-connected-text {
-  font-size: 0.9375rem;
-  color: var(--color-text-secondary);
-  margin: 0;
-}
+  .landing-hero-right svg {
+    width: 240px;
+    height: 210px;
+  }
 
-.landing-cta-btn {
-  display: inline-block;
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
-  font-size: 0.9375rem;
-  font-weight: 500;
-  padding: 0.625rem 1.25rem;
-  border-radius: 4px;
-  text-decoration: none;
-  width: fit-content;
-  transition: background 0.1s;
-}
+  .landing-how-it-works {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
 
-.landing-cta-btn:hover {
-  background: var(--color-accent-hover);
-  text-decoration: none;
-}
+  .landing-step {
+    flex: none;
+    width: calc(50% - 8px);
+    padding-right: 0;
+  }
 
-.landing-setup {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.landing-setup-desc {
-  font-size: 0.875rem;
-  color: var(--color-muted);
-  margin: 0;
-  line-height: 1.5;
+  .landing-tools-grid {
+    grid-template-columns: 1fr;
+  }
 }

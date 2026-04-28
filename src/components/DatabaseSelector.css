@@ -30,48 +30,46 @@
   gap: 1.25rem;
 }
 
-/* ── Configuration row (sentence-style) ──
-   Horizontal flex row that reads as a natural sentence:
-   "Deduplicate [db] using [field] by [action] [mode] [timing] ✓"
-   flex-wrap allows the row to reflow on narrow screens. */
+/* ── Configuration row (sentence-style / nd-chip aesthetic) ── */
 .db-config-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
   flex-wrap: wrap;
-  padding: 1rem 1.25rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-rim);
-  border-radius: 6px;
-  font-size: 0.9375rem;
+  padding: 14px 16px;
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius-md);
+  font-size: 14.5px;
 }
 
 .db-config-text {
-  font-weight: 500;
-  color: var(--color-text);
+  font-size: 14.5px;
+  color: var(--nd-text-dim);
   white-space: nowrap;
 }
 
 .db-config-checkmark {
-  padding: 0.5rem 1rem;
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
+  margin-left: auto;
+  padding: 3px 12px;
+  background: var(--nd-text);
+  color: var(--nd-bg);
   border: none;
-  border-radius: 4px;
-  font-size: 1.125rem;
-  font-weight: 600;
+  border-radius: var(--nd-radius);
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease;
-  font-family: inherit;
+  transition: opacity 0.1s;
+  font-family: var(--nd-font, inherit);
   flex-shrink: 0;
 }
 
 .db-config-checkmark:hover:not(:disabled) {
-  background: var(--color-accent-hover);
+  opacity: 0.88;
 }
 
 .db-config-checkmark:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 

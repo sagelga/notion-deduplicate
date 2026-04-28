@@ -81,6 +81,73 @@ a:hover {
   text-decoration: underline;
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Notion-ish design tokens (--nd-*) — used by components that follow
+   the hi-fi prototype aesthetic (Notification, Footer, config chips, etc.)
+   Mirror light/dark at the same breakpoints as --color-* above.
+   ────────────────────────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  --nd-bg:              #ffffff;
+  --nd-bg-soft:         #f7f6f3;
+  --nd-bg-hover:        rgba(55, 53, 47, 0.06);
+  --nd-bg-active:       rgba(55, 53, 47, 0.10);
+  --nd-divider:         rgba(55, 53, 47, 0.09);
+  --nd-divider-strong:  rgba(55, 53, 47, 0.16);
+  --nd-text:            rgb(55, 53, 47);
+  --nd-text-dim:        rgba(55, 53, 47, 0.65);
+  --nd-text-faint:      rgba(55, 53, 47, 0.45);
+  --nd-accent:          #E5613A;
+  --nd-accent-bg:       rgba(229, 97, 58, 0.10);
+  --nd-accent-bg-strong:rgba(229, 97, 58, 0.18);
+  --nd-danger:          #C8423C;
+  --nd-danger-bg:       rgba(200, 66, 60, 0.10);
+  --nd-ok:              #287F46;
+  --nd-ok-bg:           rgba(40, 127, 70, 0.10);
+  --nd-blue:            #2A7BC2;
+  --nd-blue-bg:         rgba(42, 123, 194, 0.10);
+  --nd-chip-bg:         rgba(55, 53, 47, 0.05);
+  --nd-paper-edge:      rgba(55, 53, 47, 0.12);
+  --nd-ink:             rgb(55, 53, 47);
+  --nd-paper:           #fffdf7;
+  --nd-shadow-sm:       0 1px 2px rgba(15, 15, 15, 0.05);
+  --nd-shadow-md:       0 2px 6px rgba(15, 15, 15, 0.08), 0 1px 2px rgba(15, 15, 15, 0.04);
+  --nd-shadow-lg:       0 10px 40px rgba(15, 15, 15, 0.10), 0 4px 12px rgba(15, 15, 15, 0.06);
+  --nd-radius-sm:       3px;
+  --nd-radius:          4px;
+  --nd-radius-md:       6px;
+  --nd-radius-lg:       8px;
+  --nd-font:            ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --nd-mono:            ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+[data-theme="dark"] {
+  --nd-bg:              #191919;
+  --nd-bg-soft:         #202020;
+  --nd-bg-hover:        rgba(255, 255, 255, 0.055);
+  --nd-bg-active:       rgba(255, 255, 255, 0.09);
+  --nd-divider:         rgba(255, 255, 255, 0.09);
+  --nd-divider-strong:  rgba(255, 255, 255, 0.16);
+  --nd-text:            rgba(255, 255, 255, 0.90);
+  --nd-text-dim:        rgba(255, 255, 255, 0.58);
+  --nd-text-faint:      rgba(255, 255, 255, 0.36);
+  --nd-accent:          #E5613A;
+  --nd-accent-bg:       rgba(229, 97, 58, 0.16);
+  --nd-accent-bg-strong:rgba(229, 97, 58, 0.26);
+  --nd-danger:          #E26B66;
+  --nd-danger-bg:       rgba(226, 107, 102, 0.14);
+  --nd-ok:              #4FB26F;
+  --nd-ok-bg:           rgba(79, 178, 111, 0.15);
+  --nd-blue:            #5FA5DB;
+  --nd-blue-bg:         rgba(95, 165, 219, 0.14);
+  --nd-chip-bg:         rgba(255, 255, 255, 0.05);
+  --nd-paper-edge:      rgba(255, 255, 255, 0.14);
+  --nd-ink:             rgba(255, 255, 255, 0.90);
+  --nd-paper:           #2a2826;
+  --nd-shadow-md:       0 2px 6px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --nd-shadow-lg:       0 10px 40px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.30);
+}
+
 /* ── Layout helpers ──
    #__next and main form a full-height column flex container so the
    footer is always pushed to the bottom of the viewport even on short
