@@ -1,0 +1,24 @@
+/* DragDropTaskList.css */
+
+.drag-drop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 40px;
+  transition: background 0.15s;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.drag-drop-list--active {
+  background: rgba(35, 131, 226, 0.04);
+}
+
+.drag-drop-item {
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.drag-drop-item--dragging {
+  transform: rotate(2deg) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
