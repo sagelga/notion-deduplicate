@@ -14,6 +14,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useNotionToken } from "@/hooks/useNotionToken";
+import { Button, Input } from "./ui";
 import "./SetupForm.css";
 
 interface Step {
@@ -116,17 +117,15 @@ export default function SetupForm() {
     <form onSubmit={handleSubmit} className="setup-form">
       <div className="setup-field">
         <label className="setup-label">Notion Integration Token</label>
-        <input
+        <Input
           type="password"
+          variant="mono"
           value={token}
-          onChange={(e) => setToken(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setToken(e.target.value)}
           placeholder="secret_... or ntn_..."
-          required
-          className="setup-input"
+          error={error}
         />
       </div>
-
-      {error && <p className="setup-error">{error}</p>}
 
       <div className="setup-stepper">
         <p className="setup-stepper-header">How to set up your Notion integration</p>
@@ -156,14 +155,13 @@ export default function SetupForm() {
         </div>
 
         <div className="setup-stepper-nav">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={goPrev}
             disabled={isFirst}
-            className="setup-stepper-btn"
           >
             ← Prev
-          </button>
+          </Button>
           <span className="setup-stepper-dots">
             {steps.map((_, i) => (
               <span
@@ -178,14 +176,13 @@ export default function SetupForm() {
               />
             ))}
           </span>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={goNext}
             disabled={isLast}
-            className="setup-stepper-btn"
           >
             Next →
-          </button>
+          </Button>
         </div>
       </div>
 

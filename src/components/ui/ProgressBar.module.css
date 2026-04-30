@@ -1,0 +1,85 @@
+/* ──────────────────────────────────────────────────────────────
+   ProgressBar.module.css — atomic progress indicator component
+   Variants: determinate | indeterminate
+
+   Determinate: shows exact percentage filled.
+   Indeterminate: animated sweep effect for unknown duration.
+
+   Uses --color-* tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Base track ── */
+.progress-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-rim);
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Fill (shared base) ── */
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--color-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ── Determinate variant ── */
+.progress--determinate .progress-fill {
+  /* Width set inline via style prop */
+}
+
+/* ── Indeterminate variant ── */
+.progress--indeterminate .progress-fill {
+  width: 35%;
+  animation: progress-sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes progress-sweep {
+  0%   { transform: translateX(-200%); }
+  100% { transform: translateX(420%); }
+}
+
+/* ── Size variants ── */
+
+/* Thin — for inline use */
+.progress--thin .progress-track {
+  height: 2px;
+}
+
+/* Standard — default height */
+.progress--standard .progress-track {
+  height: 3px;
+}
+
+/* Thick — for prominent progress */
+.progress--thick .progress-track {
+  height: 6px;
+  border-radius: 3px;
+}
+
+/* ── With label ── */
+.progress-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.progress-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Success/error states ── */
+.progress--success .progress-fill {
+  background: var(--nd-ok);
+}
+
+.progress--error .progress-fill {
+  background: var(--nd-danger);
+}

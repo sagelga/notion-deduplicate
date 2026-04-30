@@ -1,0 +1,64 @@
+/* ──────────────────────────────────────────────────────────────
+   Card.module.css — atomic card container component
+   Variants: default | elevated | split
+
+   Uses --nd-* design tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Base card ── */
+.card {
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius-md);
+  padding: 1rem;
+}
+
+/* ── Variants ── */
+
+/* Default: subtle bg, standard border */
+.card--default {}
+
+/* Elevated: adds box shadow for depth */
+.card--elevated {
+  box-shadow: var(--nd-shadow-md);
+}
+
+/* Split: used for keep/delete dual panels */
+.card--split {
+  border-left: 3px solid var(--nd-divider);
+}
+
+/* ── Card sub-elements ── */
+
+/* Card header */
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Card title */
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--nd-text);
+  margin: 0;
+}
+
+/* Card body */
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Card footer */
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--nd-divider);
+}

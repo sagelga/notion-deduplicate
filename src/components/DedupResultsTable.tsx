@@ -16,6 +16,7 @@
 import type { ReactNode } from "react";
 import { Table, type TableColumn } from "./table/Table";
 import { CellValue } from "./table/CellValue";
+import { Badge, type BadgeVariant } from "./ui";
 import type { PageRow, Phase } from "./dedup-types";
 
 const PAGE_SIZE = 20;
@@ -42,9 +43,9 @@ export function DedupResultsTable({ rows, fieldName, dryRun, phase }: DedupResul
       format: (value): ReactNode => {
         const status = value as string;
         return (
-          <span className={`auto-badge auto-badge--${status}`}>
+          <Badge variant={status as BadgeVariant}>
             {status}
-          </span>
+          </Badge>
         );
       },
     },

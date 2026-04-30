@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from "react";
 import type { PageRow, Stats, Mode } from "./dedup-types";
+import { Button, Tag, Kbd } from "./ui";
 import "./DedupReviewGroups.css";
 
 interface Group {
@@ -58,9 +59,9 @@ export function DedupReviewGroups({ rows, stats, mode, onConfirm, onCancel }: De
         <p className="drg-empty-sub">
           Scanned {stats.scanned} pages — all values are unique.
         </p>
-        <button className="drg-btn drg-btn--ghost" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel}>
           ← Back to configure
-        </button>
+        </Button>
       </div>
     );
   }
@@ -74,17 +75,17 @@ export function DedupReviewGroups({ rows, stats, mode, onConfirm, onCancel }: De
       {/* Header */}
       <div className="drg-header">
         <h1 className="drg-title">Review duplicates</h1>
-        <span className="drg-tag drg-tag--orange">
+        <Tag variant="orange">
           {groups.length} groups · {totalToDelete} to {mode === "archive" ? "archive" : "delete"}
-        </span>
+        </Tag>
         <span className="drg-keep-hint">keep = newest</span>
       </div>
 
       {/* Group nav */}
       <div className="drg-nav">
-        <button className="drg-btn drg-btn--sm" disabled={gIdx === 0} onClick={() => setGIdx(g => g - 1)}>
+        <Button size="sm" disabled={gIdx === 0} onClick={() => setGIdx(g => g - 1)}>
           ‹ Prev
-        </button>
+        </Button>
         <div className="drg-dots">
           {groups.map((_, i) => (
             <div
@@ -95,15 +96,15 @@ export function DedupReviewGroups({ rows, stats, mode, onConfirm, onCancel }: De
           ))}
         </div>
         <span className="drg-nav-count">{gIdx + 1}/{groups.length}</span>
-        <button className="drg-btn drg-btn--sm" disabled={isLast} onClick={() => setGIdx(g => g + 1)}>
+        <Button size="sm" disabled={isLast} onClick={() => setGIdx(g => g + 1)}>
           Next ›
-        </button>
+        </Button>
       </div>
 
       {/* Group field value label */}
       <div className="drg-group-label">
         <span className="drg-field-value">{group.fieldValue || "(empty)"}</span>
-        <span className="drg-tag drg-tag--gray">{group.deleteRows.length + 1} pages</span>
+        <Tag variant="gray">{group.deleteRows.length + 1} pages</Tag>
       </div>
 
       {/* Keep / Delete split */}
@@ -137,22 +138,21 @@ export function DedupReviewGroups({ rows, stats, mode, onConfirm, onCancel }: De
 
       {/* Actions */}
       <div className="drg-actions">
-        <button
-          className="drg-btn drg-btn--danger"
+        <Button
+          variant="danger"
           onClick={onConfirm}
         >
           {mode === "archive" ? "Archive" : "Delete"} {totalToDelete} duplicate{totalToDelete !== 1 ? "s" : ""}
-        </button>
-        <button
-          className="drg-btn"
+        </Button>
+        <Button
           onClick={() => { if (!isLast) setGIdx(g => g + 1); else onConfirm?.(); }}
         >
           {isLast ? "Done reviewing →" : "Next group →"}
-        </button>
+        </Button>
         <span className="drg-kbd-hint">
-          <kbd className="drg-kbd">←→</kbd> navigate
+          <Kbd>←→</Kbd> navigate
         </span>
-        <button className="drg-btn drg-btn--ghost drg-btn--cancel" onClick={onCancel}>Cancel</button>
+        <Button variant="cancel" onClick={onCancel}>Cancel</Button>
       </div>
     </div>
   );

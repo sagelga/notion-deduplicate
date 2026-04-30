@@ -1,0 +1,49 @@
+/* ──────────────────────────────────────────────────────────────
+   Spinner.module.css — atomic indeterminate spinner component
+   Sizes: sm | md | lg
+
+   Uses CSS animation for rotation. Border uses rim color
+   with transparent top to create the spinning arc effect.
+
+   Uses --nd-* design tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Base spinner ── */
+.spinner {
+  border-radius: 50%;
+  border: 2px solid var(--nd-divider);
+  border-top-color: var(--nd-accent);
+  animation: spinner-rotate 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Sizes ── */
+.spinner--sm {
+  width: 14px;
+  height: 14px;
+  border-width: 1.5px;
+}
+
+.spinner--md {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+.spinner--lg {
+  width: 28px;
+  height: 28px;
+  border-width: 2.5px;
+}
+
+/* ── Variant: ring (thinner border, used in progress island) ── */
+.spinner--ring {
+  border-width: 1.5px;
+  border-top-color: var(--nd-accent);
+}

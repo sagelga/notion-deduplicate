@@ -20,6 +20,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useDedup } from "@/hooks/useDedup";
+import { Button } from "./ui";
 import "./DedupProgressBottomSheet.css";
 
 interface RingProps {
@@ -245,15 +246,15 @@ export default function DedupProgressBottomSheet() {
         {/* Actions */}
         <div className="dedup-sheet-actions">
           {(phase === "running" || phase === "paused") && (
-            <button
-              className="dedup-act-btn dedup-act-btn--secondary"
+            <Button
+              variant="secondary"
               onClick={() => {
                 pausedRef.current = !pausedRef.current;
                 setPhase(pausedRef.current ? "paused" : "running");
               }}
             >
               {phase === "paused" ? "Resume" : "Pause"}
-            </button>
+            </Button>
           )}
           {!isOnDedupPage && (
             <Link href="/duplicate" className="dedup-act-btn dedup-act-btn--primary">
@@ -261,12 +262,12 @@ export default function DedupProgressBottomSheet() {
             </Link>
           )}
           {(phase === "done" || phase === "error") && (
-            <button
-              className="dedup-act-btn dedup-act-btn--ghost"
+            <Button
+              variant="ghost"
               onClick={dismissDedup}
             >
               Dismiss
-            </button>
+            </Button>
           )}
         </div>
 

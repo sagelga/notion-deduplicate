@@ -1,0 +1,23 @@
+/* ──────────────────────────────────────────────────────────────
+   Kbd.module.css — keyboard hint badge component
+
+   Displays keyboard shortcuts in a monospace chip style.
+   Used for keyboard navigation hints in UI.
+
+   Uses --nd-* design tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Base kbd ── */
+.kbd {
+  font-family: var(--nd-mono);
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--nd-chip-bg);
+  color: var(--nd-text-dim);
+  border: 1px solid var(--nd-divider);
+  line-height: 1.6;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}

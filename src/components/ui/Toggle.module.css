@@ -1,0 +1,77 @@
+/* ──────────────────────────────────────────────────────────────
+   Toggle.module.css — atomic toggle switch component
+
+   Custom CSS toggle (track + thumb) rather than native checkbox.
+   Accessible: uses a hidden native checkbox for a11y with
+   visual styling applied to the label.
+
+   Uses --color-* tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Wrapper — positions the hidden input and visual track ── */
+.toggle-wrapper {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Hide native checkbox visually but keep it accessible */
+.toggle-wrapper input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Track ── */
+.toggle-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--color-rim);
+  border-radius: 12px;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+/* On state */
+.toggle-track--on {
+  background: var(--color-accent);
+}
+
+/* Disabled state */
+.toggle-wrapper--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Thumb ── */
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: var(--color-canvas);
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* On state — thumb slides right */
+.toggle-track--on .toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* ── Label text ── */
+.toggle-label {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  margin-left: 0.5rem;
+  user-select: none;
+}

@@ -1,0 +1,76 @@
+/* ──────────────────────────────────────────────────────────────
+   Input.module.css — atomic text input component
+   Variants: default | mono (monospace for tokens/IDs)
+
+   Uses --color-* tokens to match existing input patterns
+   in SetupForm.css and other form components.
+
+   Focus ring uses raw rgba because --color-accent has no
+   triplet token at 0.15 alpha.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Base input ── */
+.input {
+  width: 100%;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-rim);
+  color: var(--color-text);
+  border-radius: var(--nd-radius);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.1s, box-shadow 0.1s;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+/* Focus ring — subtle accent ring */
+.input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.15);
+}
+
+/* Placeholder styling */
+.input::placeholder {
+  color: var(--color-muted);
+}
+
+/* Disabled state */
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Error state */
+.input--error {
+  border-color: var(--nd-danger);
+}
+
+.input--error:focus {
+  border-color: var(--nd-danger);
+  box-shadow: 0 0 0 2px rgba(200, 66, 60, 0.15);
+}
+
+/* ── Variants ── */
+
+/* Monospace variant — used for tokens, IDs, codes */
+.input--mono {
+  font-family: var(--nd-mono);
+  font-size: 0.875rem;
+}
+
+/* ── Helper text ── */
+.input-helper {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  margin-top: 0.25rem;
+  line-height: 1.5;
+}
+
+.input-error {
+  font-size: 0.8125rem;
+  color: var(--nd-danger);
+  margin-top: 0.25rem;
+  line-height: 1.5;
+}

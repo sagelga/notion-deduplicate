@@ -22,7 +22,7 @@
 import React, { useEffect } from "react";
 import "./BottomSheet.css";
 
-interface BottomSheetProps {
+export interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;

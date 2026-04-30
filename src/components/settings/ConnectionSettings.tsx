@@ -9,6 +9,7 @@
 
 import { useState } from "react";
 import { useNotionToken } from "@/hooks/useNotionToken";
+import { Button } from "@/components/ui";
 import "./ConnectionSettings.css";
 
 function validateToken(value: string): string {
@@ -100,9 +101,9 @@ export default function ConnectionSettings() {
         {error && <p className="connection-error">{error}</p>}
 
         <div className="connection-actions">
-          <button type="submit" className="connection-btn connection-btn-primary">
+          <Button variant="primary" type="submit">
             Connect
-          </button>
+          </Button>
           {isConnected && (
             <button
               type="button"

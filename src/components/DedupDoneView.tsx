@@ -4,6 +4,7 @@
 "use client";
 
 import type { Stats, Mode } from "./dedup-types";
+import { Button } from "./ui";
 import "./DedupDoneView.css";
 
 interface DedupDoneViewProps {
@@ -74,12 +75,12 @@ export function DedupDoneView({
 
       {/* Actions */}
       <div className="ddv-actions">
-        <button className="ddv-btn ddv-btn--primary" onClick={onScanAnother}>
+        <Button variant="primary" onClick={onScanAnother}>
           Scan another database
-        </button>
-        <button className="ddv-btn ddv-btn--ghost" onClick={onHome}>
+        </Button>
+        <Button variant="ghost" onClick={onHome}>
           Back to home
-        </button>
+        </Button>
       </div>
     </div>
   );

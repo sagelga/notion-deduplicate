@@ -1,0 +1,47 @@
+/* ──────────────────────────────────────────────────────────────
+   Tag.module.css — atomic tag component
+   Variants: default | orange | gray | green
+
+   Tags are semantically for categories/filters vs badges which
+   are for status. Visually they share the same base styles.
+
+   Uses --nd-* design tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Base tag ── */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* ── Variants ── */
+
+/* Default: neutral chip style */
+.tag--default {
+  background: var(--nd-chip-bg);
+  color: var(--nd-text-dim);
+}
+
+/* Orange: accent tinted */
+.tag--orange {
+  background: var(--nd-accent-bg);
+  color: var(--nd-accent);
+}
+
+/* Gray: subtle neutral */
+.tag--gray {
+  background: var(--nd-chip-bg);
+  color: var(--nd-text-dim);
+}
+
+/* Green: ok/success tinted */
+.tag--green {
+  background: var(--nd-ok-bg);
+  color: var(--nd-ok);
+}

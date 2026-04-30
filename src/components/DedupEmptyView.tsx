@@ -4,6 +4,7 @@
 "use client";
 
 import type { Stats } from "./dedup-types";
+import { Button } from "./ui";
 import "./DedupEmptyView.css";
 
 interface DedupEmptyViewProps {
@@ -31,9 +32,9 @@ export function DedupEmptyView({
         scanned {stats.scanned} pages · {stats.scanned} unique values · 0 groups
       </p>
       <div className="dev-actions">
-        <button className="dev-btn dev-btn--ghost" onClick={onChangeDatabase}>
+        <Button variant="ghost" onClick={onChangeDatabase}>
           Change database
-        </button>
+        </Button>
       </div>
     </div>
   );

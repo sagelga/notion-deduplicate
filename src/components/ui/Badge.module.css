@@ -1,0 +1,87 @@
+/* ──────────────────────────────────────────────────────────────
+   Badge.module.css — atomic badge component
+   Variants: default | orange | gray | green | kept | deleted |
+              archived | skipped | error | pending | retry
+
+   Uses --nd-* design tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Base badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* ── Variants ── */
+
+/* Default: neutral chip style */
+.badge--default {
+  background: var(--nd-chip-bg);
+  color: var(--nd-text-dim);
+}
+
+/* Orange: accent tinted */
+.badge--orange {
+  background: var(--nd-accent-bg);
+  color: var(--nd-accent);
+}
+
+/* Gray: subtle neutral */
+.badge--gray {
+  background: var(--nd-chip-bg);
+  color: var(--nd-text-dim);
+}
+
+/* Green: ok/success tinted */
+.badge--green {
+  background: var(--nd-ok-bg);
+  color: var(--nd-ok);
+}
+
+/* Kept: blue tint — used in dedup keep actions */
+.badge--kept {
+  background: var(--nd-blue-bg);
+  color: var(--nd-blue);
+}
+
+/* Deleted: red tint — used in dedup delete actions */
+.badge--deleted {
+  background: var(--nd-danger-bg);
+  color: var(--nd-danger);
+}
+
+/* Archived: gray neutral */
+.badge--archived {
+  background: var(--nd-chip-bg);
+  color: var(--nd-text-dim);
+}
+
+/* Skipped: gray neutral */
+.badge--skipped {
+  background: var(--nd-chip-bg);
+  color: var(--nd-text-dim);
+}
+
+/* Error: danger tinted */
+.badge--error {
+  background: var(--nd-danger-bg);
+  color: var(--nd-danger);
+}
+
+/* Pending: gray — dry-run would-be-actioned pages */
+.badge--pending {
+  background: var(--nd-chip-bg);
+  color: var(--nd-text-dim);
+}
+
+/* Retry: gray — page is in the retry queue */
+.badge--retry {
+  background: var(--nd-chip-bg);
+  color: var(--nd-text-dim);
+}

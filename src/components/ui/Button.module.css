@@ -1,0 +1,101 @@
+/* ──────────────────────────────────────────────────────────────
+   Button.module.css — atomic button component
+   Variants: default | primary | secondary | ghost | danger | cancel
+   Sizes: default | sm
+
+   Uses --nd-* design tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Base button ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--nd-radius);
+  border: 1px solid var(--nd-divider-strong);
+  background: var(--nd-bg);
+  color: var(--nd-text);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 80ms;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--nd-bg-hover);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Sizes ── */
+.btn--sm {
+  padding: 3px 8px;
+  font-size: 12.5px;
+}
+
+/* ── Variants ── */
+
+/* Default: same as base, explicit */
+.btn--default {}
+
+/* Primary: solid accent background */
+.btn--primary {
+  background: var(--nd-accent);
+  color: #fff;
+  border-color: var(--nd-accent);
+}
+
+.btn--primary:hover:not(:disabled) {
+  opacity: 0.88;
+  background: var(--nd-accent);
+}
+
+/* Secondary: transparent bg, visible border */
+.btn--secondary {
+  background: transparent;
+  border-color: var(--nd-divider-strong);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--nd-bg-hover);
+}
+
+/* Ghost: fully transparent */
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--nd-bg-hover);
+}
+
+/* Danger: red background */
+.btn--danger {
+  background: var(--nd-danger);
+  color: #fff;
+  border-color: var(--nd-danger);
+}
+
+.btn--danger:hover:not(:disabled) {
+  opacity: 0.88;
+  background: var(--nd-danger);
+}
+
+/* Cancel: muted text, minimal visual weight */
+.btn--cancel {
+  background: transparent;
+  border-color: transparent;
+  color: var(--nd-text-faint);
+}
+
+.btn--cancel:hover:not(:disabled) {
+  background: var(--nd-bg-hover);
+  color: var(--nd-text);
+}
