@@ -73,6 +73,16 @@
   cursor: not-allowed;
 }
 
+.db-config-error {
+  font-size: 13px;
+  color: #eb5757;
+  background: rgba(235, 87, 87, 0.08);
+  border: 1px solid rgba(235, 87, 87, 0.2);
+  border-radius: var(--nd-radius-sm);
+  padding: 3px 8px;
+  margin-left: 4px;
+}
+
 /* ── Main content area ── */
 .db-main-content {
   display: flex;

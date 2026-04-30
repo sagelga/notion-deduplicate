@@ -53,6 +53,26 @@ type DeleteTask = {
   fieldValue: string;
 };
 
+const normalizePageToMinimal = (
+  rawPage: RawNotionPage,
+  fieldName: string,
+  fieldType: string,
+  titlePropName: string | undefined
+): MinimalPage => {
+  let title = "(Untitled)";
+  if (titlePropName) {
+    const titleProp = rawPage.properties[titlePropName];
+    if (titleProp && "title" in titleProp) {
+      title = titleProp.title?.[0]?.plain_text ?? "(Untitled)";
+    }
+  }
+  const fieldProp = rawPage.properties[fieldName];
+  const fieldValue = fieldProp
+    ? (getPropertyValue(fieldProp, fieldType) ?? "(empty)")
+    : "(empty)";
+  return { id: rawPage.id, created_time: rawPage.created_time, title, fieldValue };
+};
+
 export interface UseAutoDedupOptions {
   databaseId: string;
   fieldName: string;
@@ -71,7 +91,9 @@ export interface UseAutoDedupReturn {
   logs: LogEntry[];
   /** Full unsliced log array — use for export. Ref so callers don't cause re-renders. */
   allLogsRef: React.MutableRefObject<LogEntry[]>;
-  start: () => void;
+    start: () => void;
+    /** Resets stats to zero and clears all queues. Called by start(). */
+    reset: () => void;
   pause: () => void;
   resume: () => void;
   stop: () => void;
@@ -157,6 +179,8 @@ export function useAutoDeduplicate({
 
     const startTime = startTimeRef.current;
 
+    const elapsed = () => `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+
     const appendLog = (raw: Record<string, unknown>, level: LogEntry["level"], message: string) => {
       const absTs = Date.now();
       allLogsRef.current.push({
@@ -203,7 +227,12 @@ export function useAutoDeduplicate({
       const titlePropName = schema.find((p) => p.type === "title")?.name;
 
       if (!fieldType) {
-        appendLog({ type: "error" }, "error", `Field "${fieldName}" not found in schema`);
+        const available = schema.map((p) => `${p.name} (${p.type})`).join(", ");
+        appendLog(
+          { type: "error", fieldName, availableFields: schema.map((p) => p.name) },
+          "error",
+          `Field "${fieldName}" not found in schema. Available fields: ${available}`
+        );
         setPhase("error");
         return;
       }
@@ -215,100 +244,92 @@ export function useAutoDeduplicate({
       // ── Stage 1: fetchWorker ──────────────────────────────────────────────────
       const fetchWorker = async () => {
         setActiveStage("fetch");
+        let pagesProcessed = 0;
         try {
           if (pagesFromCache) {
             appendLog(
-              { type: "stage", stage: "fetch" },
+              { type: "cache", stage: "fetch", hit: true, count: pagesFromCache.length },
               "info",
-              `Using cached pages (${pagesFromCache.length} pages, < 30s old)`
+              `Cache HIT — loading ${pagesFromCache.length} pages from cache (< 30s old)`
             );
             for (const rawPage of pagesFromCache) {
               if (cancelledRef.current) return;
-              let title = "(Untitled)";
-              if (titlePropName) {
-                const titleProp = rawPage.properties[titlePropName];
-                if (titleProp && "title" in titleProp) {
-                  title = titleProp.title?.[0]?.plain_text ?? "(Untitled)";
-                }
-              }
-              const fieldProp = rawPage.properties[fieldName];
-              const fieldValue = fieldProp
-                ? (getPropertyValue(fieldProp, fieldType) ?? "(empty)")
-                : "(empty)";
-              fetchQueue.push({
-                id: rawPage.id,
-                created_time: rawPage.created_time,
-                title,
-                fieldValue,
-              });
+              fetchQueue.push(normalizePageToMinimal(rawPage, fieldName, fieldType, titlePropName));
+              pagesProcessed++;
             }
           } else {
-            appendLog({ type: "stage", stage: "fetch" }, "info", "Fetching pages from Notion...");
+            appendLog(
+              { type: "cache", stage: "fetch", hit: false },
+              "info",
+              `Cache MISS — fetching pages from Notion API (field="${fieldName}")`
+            );
             const allRawPages: RawNotionPage[] = [];
             let batchNum = 0;
+            let totalPages = 0;
             for await (const batch of paginateDatabase(databaseId, token)) {
               if (cancelledRef.current) return;
               batchNum++;
+              totalPages += batch.length;
               appendLog(
-                { type: "notionAPI" },
+                { type: "notionAPI", batch: batchNum, batchSize: batch.length, totalSoFar: totalPages },
                 "info",
-                `Fetching batch ${batchNum} (${batch.length} pages)`
+                `Notion API batch ${batchNum} received — ${batch.length} pages (total: ${totalPages})`
               );
               for (const rawPage of batch) {
                 if (cancelledRef.current) return;
                 allRawPages.push(rawPage);
-                let title = "(Untitled)";
-                if (titlePropName) {
-                  const titleProp = rawPage.properties[titlePropName];
-                  if (titleProp && "title" in titleProp) {
-                    title = titleProp.title?.[0]?.plain_text ?? "(Untitled)";
-                  }
-                }
-                const fieldProp = rawPage.properties[fieldName];
-                const fieldValue = fieldProp
-                  ? (getPropertyValue(fieldProp, fieldType) ?? "(empty)")
-                  : "(empty)";
-                fetchQueue.push({
-                  id: rawPage.id,
-                  created_time: rawPage.created_time,
-                  title,
-                  fieldValue,
-                });
+                fetchQueue.push(normalizePageToMinimal(rawPage, fieldName, fieldType, titlePropName));
+                pagesProcessed++;
               }
             }
             NotionCache.set(cacheKey, allRawPages);
             appendLog(
-              { type: "stage", stage: "fetch" },
+              { type: "stage", stage: "fetch", batches: batchNum, totalPages: allRawPages.length },
               "info",
-              `Fetched ${batchNum} batches`
+              `Fetch complete — ${batchNum} batch(es), ${allRawPages.length} total pages cached`
             );
           }
         } catch (err) {
-          fetchError = err instanceof Error ? err : new Error(String(err));
+          const msg = err instanceof Error ? err.message : String(err);
+          appendLog(
+            { type: "error", stage: "fetch", error: msg },
+            "error",
+            `Fetch FAILED — ${msg}`
+          );
+          fetchError = err instanceof Error ? err : new Error(msg);
         } finally {
           fetchDone = true;
+          if (pagesProcessed > 0) batchDirtyRef.current = true;
+          appendLog(
+            { type: "stage", stage: "fetch", done: true, pagesProcessed, error: fetchError?.message },
+            "info",
+            `Stage 1 (fetch) worker finished — ${pagesProcessed} pages, fetchDone=true${fetchError ? `, error: ${fetchError.message}` : ""}`
+          );
         }
       };
 
       // ── Stage 2: matchWorker ──────────────────────────────────────────────────
       const matchWorker = async () => {
         setActiveStage("match");
+        let fetchQueueIdx = 0;
+        let stats = statsFlushRef.current;
         try {
           let stageStarted = false;
-          while (!fetchDone || fetchQueue.length > 0) {
+          while (!fetchDone || fetchQueueIdx < fetchQueue.length) {
             if (cancelledRef.current) return;
             if (fetchError) throw fetchError;
 
-            if (fetchQueue.length === 0) {
+            if (fetchQueueIdx >= fetchQueue.length) {
               await new Promise<void>((r) => setTimeout(r, 5));
               continue;
             }
 
+            const queueDepth = fetchQueue.length - fetchQueueIdx;
             if (!stageStarted) {
               appendLog(
-                { type: "stage", stage: "match" },
+                { type: "stage", stage: "match", queueDepth },
                 "info",
-                "Scanning for duplicates..."
+                `Stage 2 (match) starting — ${queueDepth} pages queued for deduplication`
               );
               stageStarted = true;
             }
@@ -319,16 +340,16 @@ export function useAutoDeduplicate({
             }
             if (cancelledRef.current) return;
 
-            const { id, created_time, title, fieldValue } = fetchQueue.shift()!;
+            const { id, created_time, title, fieldValue } = fetchQueue[fetchQueueIdx++];
 
             if (skipEmpty && (fieldValue === "(empty)" || fieldValue === null)) {
               emitPage({ id, title, fieldValue, status: "skipped" });
               addToStats({ scanned: 1 });
               const s = statsFlushRef.current;
               appendLog(
-                { type: "progress", ...s },
+                { type: "skip", pageId: id, title, reason: "empty", fieldValue, ...s },
                 "info",
-                `progress — scanned: ${s.scanned}, dupes: ${s.duplicatesFound}, actioned: ${s.actioned}, errors: ${s.errors}`
+                `SKIP "${title}" [${id.slice(0, 8)}] — ${fieldName} is empty (skipEmpty=true)`
               );
               continue;
             }
@@ -338,36 +359,52 @@ export function useAutoDeduplicate({
             if (!existing) {
               seenMap.set(fieldValue, { id, created_time, title });
               emitPage({ id, title, fieldValue, status: "kept" });
+              appendLog(
+                { type: "keep", pageId: id, title, fieldValue, seenCount: seenMap.size, scanned: statsFlushRef.current.scanned + 1 },
+                "info",
+                `KEPT "${title}" [${id.slice(0, 8)}] — ${fieldName}="${fieldValue}" (${seenMap.size} unique values seen)`
+              );
             } else {
               isDuplicate = true;
               const thisTime = new Date(created_time).getTime();
               const existingTime = new Date(existing.created_time).getTime();
               let taskId: string;
               let taskTitle: string;
+              let winnerTitle: string;
+              let loserTitle: string;
               if (thisTime < existingTime) {
-                // This page is older — promote it to kept, queue the previously-kept page
                 taskId = existing.id;
                 taskTitle = existing.title;
+                winnerTitle = title;
+                loserTitle = existing.title;
                 seenMap.set(fieldValue, { id, created_time, title });
                 emitPage({ id, title, fieldValue, status: "kept" });
               } else {
-                // Existing is older — queue this page
                 taskId = id;
                 taskTitle = title;
+                winnerTitle = existing.title;
+                loserTitle = title;
               }
               deleteQueue.push({ id: taskId, title: taskTitle, fieldValue });
+              const thisAge = new Date(created_time).toISOString();
+              const existingAge = new Date(existing.created_time).toISOString();
+              appendLog(
+                { type: "duplicate", pageId: taskId, title: taskTitle, fieldValue, winnerTitle, loserTitle, thisAge, existingAge, queueDepth: deleteQueue.length },
+                "warn",
+                `DUPLICATE "${taskTitle}" [${taskId.slice(0, 8)}] — ${fieldName}="${fieldValue}" — QUEUED for ${mode} (kept: "${winnerTitle}" [older], deleted: "${loserTitle}" [newer], deleteQueue=${deleteQueue.length})`
+              );
             }
 
             addToStats({ scanned: 1, ...(isDuplicate && { duplicatesFound: 1 }) });
-            const s = statsFlushRef.current;
-            appendLog(
-              { type: "progress", ...s },
-              "info",
-              `progress — scanned: ${s.scanned}, dupes: ${s.duplicatesFound}, actioned: ${s.actioned}, errors: ${s.errors}`
-            );
           }
         } finally {
           matchDone = true;
+          const s = statsFlushRef.current;
+          appendLog(
+            { type: "stage", stage: "match", duration: Date.now() - startTime, ...s },
+            "info",
+            `Stage 2 (match) DONE — ${s.scanned} scanned, ${s.duplicatesFound} duplicates found, ${deleteQueue.length} queued for ${mode}`
+          );
         }
       };
 
@@ -375,29 +412,32 @@ export function useAutoDeduplicate({
       // On failure: push to retryQueue and mark page as "retry"; permanent errors happen in Stage 3b.
       const createDeleteWorker = (workerId: number) => async () => {
         setActiveStage("delete");
+        let deleteQueueIdx = 0;
         let stageStarted = false;
-        while (!matchDone || deleteQueue.length > 0) {
+        while (!matchDone || deleteQueueIdx < deleteQueue.length) {
           if (cancelledRef.current) return;
-          if (deleteQueue.length === 0) {
+          if (deleteQueueIdx >= deleteQueue.length) {
             await new Promise<void>((r) => setTimeout(r, 5));
             continue;
           }
+          const queueDepth = deleteQueue.length - deleteQueueIdx;
           if (!stageStarted) {
             appendLog(
-              { type: "stage", stage: "delete" },
+              { type: "stage", stage: "delete", workerId, queueDepth },
               "info",
-              `[Worker ${workerId}/3] Starting ${mode}...`
+              `Stage 3a (delete-${workerId}) starting — ${queueDepth} pages to ${mode}`
             );
             stageStarted = true;
           }
-          const task = deleteQueue.shift()!;
+          const task = deleteQueue[deleteQueueIdx++];
           const { id: pageId, title, fieldValue } = task;
+          const action = mode === "archive" ? "Archiving" : "Deleting";
+          const queueAfter = deleteQueue.length - deleteQueueIdx;
           try {
-            const action = mode === "archive" ? "Archiving" : "Deleting";
             appendLog(
-              { type: "notionAPI" },
+              { type: "action", pageId, title, fieldValue, action: mode, workerId, queueBefore: queueAfter + 1, queueAfter },
               "info",
-              `[Worker ${workerId}/3] ${action} page: "${title}"`
+              `[Worker-${workerId}] ${action.toUpperCase()} "${title}" [${pageId.slice(0, 8)}] — ${fieldName}="${fieldValue}" (queue before=${queueAfter + 1}, after=${queueAfter})`
             );
             if (mode === "archive") {
               await archivePage(pageId, token);
@@ -409,9 +449,9 @@ export function useAutoDeduplicate({
             emitPage({ id: pageId, title, fieldValue, status: actionedStatus as PageRow["status"] });
             const s = statsFlushRef.current;
             appendLog(
-              { type: "actioned", pageId, title, fieldValue, ...s },
+              { type: "actioned", pageId, title, fieldValue, actionedStatus, ...s },
               "info",
-              `[${pageId.slice(0, 8)}] ${actionedStatus.toUpperCase()} "${title}" — ${fieldName}: ${fieldValue}`
+              `[Worker-${workerId}] ${actionedStatus.toUpperCase()} "${title}" [${pageId.slice(0, 8)}] — ${fieldName}="${fieldValue}" — ${s.actioned}/${s.duplicatesFound} actioned`
             );
           } catch (err) {
             // First attempt failed — queue for one retry instead of immediately erroring.
@@ -419,9 +459,9 @@ export function useAutoDeduplicate({
             addToStats({ retrying: 1 });
             emitPage({ id: pageId, title, fieldValue, status: "retry" });
             appendLog(
-              { type: "actionError", pageId, title, error: err instanceof Error ? err.message : "Unknown" },
+              { type: "retryQueued", pageId, title, fieldValue, error: err instanceof Error ? err.message : "Unknown", retryQueueDepth: retryQueue.length + 1 },
               "warn",
-              `[${pageId.slice(0, 8)}] FAILED (will retry) to ${mode} "${title}": ${err instanceof Error ? err.message : "Unknown"}`
+              `[Worker-${workerId}] RETRY "${title}" [${pageId.slice(0, 8)}] — ${err instanceof Error ? err.message : "Unknown"} — queued for retry (retryQueue=${retryQueue.length + 1})`
             );
           }
         }
@@ -430,17 +470,27 @@ export function useAutoDeduplicate({
       // ── Stage 3b: retryWorker (second attempt; runs after all deleteWorkers finish) ──
       // On failure: mark permanently as "error" with no further retries.
       const createRetryWorker = (workerId: number) => async () => {
-        if (retryQueue.length === 0) return;
+        const retryQueueLength = retryQueue.length;
+        if (retryQueueLength === 0) return;
+        let retryQueueIdx = 0;
         appendLog(
-          { type: "stage", stage: "retry" },
+          { type: "stage", stage: "retry", workerId, queueDepth: retryQueueLength },
           "info",
-          `[Retry Worker ${workerId}/3] Processing ${retryQueue.length} items in retry queue...`
+          `Stage 3b (retry-${workerId}) starting — ${retryQueueLength} page(s) to retry`
         );
-        while (retryQueue.length > 0) {
+        let retriesAttempted = 0;
+        while (retryQueueIdx < retryQueue.length) {
           if (cancelledRef.current) return;
-          const { id: pageId, title, fieldValue } = retryQueue.shift()!;
+          const { id: pageId, title, fieldValue } = retryQueue[retryQueueIdx++];
+          retriesAttempted++;
           addToStats({ retrying: -1 });
           try {
+            const action = mode === "archive" ? "Archiving" : "Deleting";
+            appendLog(
+              { type: "retry", pageId, title, fieldValue, action: mode, attemptNumber: retriesAttempted },
+              "info",
+              `[Retry-${workerId}] Attempt ${retriesAttempted}: ${action} "${title}" [${pageId.slice(0, 8)}] — ${fieldName}="${fieldValue}"`
+            );
             if (mode === "archive") {
               await archivePage(pageId, token);
             } else {
@@ -451,46 +501,55 @@ export function useAutoDeduplicate({
             emitPage({ id: pageId, title, fieldValue, status: actionedStatus as PageRow["status"] });
             const s = statsFlushRef.current;
             appendLog(
-              { type: "actioned", pageId, title, fieldValue, ...s },
+              { type: "actioned", pageId, title, fieldValue, actionedStatus, ...s },
               "info",
-              `[Retry] ${actionedStatus.toUpperCase()} "${title}" — ${fieldName}: ${fieldValue}`
+              `[Retry-${workerId}] SUCCEEDED "${title}" [${pageId.slice(0, 8)}] — ${s.actioned}/${s.duplicatesFound} actioned`
             );
           } catch (err) {
             addToStats({ errors: 1 });
             emitPage({ id: pageId, title, fieldValue, status: "error" });
+            const msg = err instanceof Error ? err.message : "Unknown";
             appendLog(
-              { type: "actionError", pageId, title, error: err instanceof Error ? err.message : "Unknown" },
+              { type: "actionError", pageId, title, fieldValue, error: msg },
               "error",
-              `[Retry][${pageId.slice(0, 8)}] PERMANENT FAILURE — ${mode} "${title}": ${err instanceof Error ? err.message : "Unknown"}. Delete manually in Notion.`
+              `[Retry-${workerId}] PERMANENT FAILURE "${title}" [${pageId.slice(0, 8)}] — ${msg} — MANUALLY DELETE in Notion`
             );
           }
         }
+        appendLog(
+          { type: "stage", stage: "retry", workerId, retriesAttempted },
+          "info",
+          `Stage 3b (retry-${workerId}) DONE — ${retriesAttempted} retry attempt(s) completed`
+        );
       };
 
       // ── Stage 3b: drainWorker (dry-run) ───────────────────────────────────────
       const createDrainWorker = (workerId: number) => async () => {
         setActiveStage("preview");
+        let drainQueueIdx = 0;
         let stageStarted = false;
-        while (!matchDone || deleteQueue.length > 0) {
+        while (!matchDone || drainQueueIdx < deleteQueue.length) {
           if (cancelledRef.current) return;
-          if (deleteQueue.length === 0) {
+          if (drainQueueIdx >= deleteQueue.length) {
             await new Promise<void>((r) => setTimeout(r, 5));
             continue;
           }
+          const queueDepth = deleteQueue.length - drainQueueIdx;
           if (!stageStarted) {
             appendLog(
-              { type: "stage", stage: "preview" },
+              { type: "stage", stage: "preview", workerId, queueDepth },
               "info",
-              `[Worker ${workerId}/3] Ready (dry-run mode)`
+              `Stage 3 (drain-${workerId}) starting — dry-run preview, ${queueDepth} pages would be ${mode}d`
             );
             stageStarted = true;
           }
-          const { id: pageId, title, fieldValue } = deleteQueue.shift()!;
+          const { id: pageId, title, fieldValue } = deleteQueue[drainQueueIdx++];
           emitPage({ id: pageId, title, fieldValue, status: "pending" });
+          const s = statsFlushRef.current;
           appendLog(
-            { type: "page", id: pageId, title, fieldValue, status: "pending" },
+            { type: "preview", pageId, title, fieldValue, action: mode, queueRemaining: deleteQueue.length - drainQueueIdx, ...s },
             "warn",
-            `[${pageId.slice(0, 8)}] WOULD ${mode.toUpperCase()} "${title}" — ${fieldName}: ${fieldValue}`
+            `[Drain-${workerId}] WOULD ${mode.toUpperCase()} "${title}" [${pageId.slice(0, 8)}] — ${fieldName}="${fieldValue}" (${deleteQueue.length - drainQueueIdx} remaining)`
           );
         }
       };
@@ -508,9 +567,9 @@ export function useAutoDeduplicate({
         ]);
         if (!cancelledRef.current && retryQueue.length > 0) {
           appendLog(
-            { type: "stage", stage: "retry" },
+            { type: "stage", stage: "retry", queueDepth: retryQueue.length },
             "info",
-            `Starting retry phase for ${retryQueue.length} item(s)...`
+            `Starting Stage 3b (retry phase) — ${retryQueue.length} failed item(s) will be retried`
           );
           await Promise.all([
             createRetryWorker(1)(),
@@ -540,11 +599,15 @@ export function useAutoDeduplicate({
       }
 
       const s = statsFlushRef.current;
-      const errorSuffix = s.errors > 0 ? `, ${s.errors} permanently failed (delete manually in Notion)` : "";
+      const duration = Date.now() - startTime;
+      const throughput = s.scanned > 0 ? ((s.scanned / duration) * 1000).toFixed(1) : "0";
+      const errorSuffix = s.errors > 0 ? `, ${s.errors} permanently failed (must delete manually in Notion)` : "";
+      const skippedSuffix = skipEmpty ? ` (skipped empty)` : "";
+      const summary = `PIPELINE COMPLETE — ${s.scanned} scanned${skippedSuffix}, ${s.duplicatesFound} duplicates identified, ${s.actioned} ${mode}d (${throughput} pages/sec)${errorSuffix}`;
       appendLog(
-        { type: "done", ...s },
+        { type: "done", duration, throughput, ...s },
         s.errors > 0 ? "warn" : "info",
-        `DONE — ${s.scanned} scanned, ${s.duplicatesFound} duplicates found, ${s.actioned} ${mode}d${errorSuffix}`
+        summary
       );
       setStats({ ...s });
       setActiveStage("");
@@ -552,13 +615,14 @@ export function useAutoDeduplicate({
     } catch (err) {
       if (!cancelledRef.current) {
         const msg = err instanceof Error ? err.message : "Unknown error";
+        const stack = err instanceof Error ? err.stack : undefined;
         allLogsRef.current.push({
           ts: Date.now() - startTime,
           absTs: Date.now(),
           type: "error",
           level: "error",
           message: `FATAL ERROR — ${msg}`,
-          raw: { type: "error" },
+          raw: { type: "error", error: msg, stack },
         });
         logsDirtyRef.current = true;
         setPhase("error");
@@ -566,32 +630,37 @@ export function useAutoDeduplicate({
     }
   }, [databaseId, fieldName, token, mode, skipEmpty, dryRun, flushRows]);
 
-  const start = useCallback(() => {
-    cancelledRef.current = false;
-    pausedRef.current = false;
+  const reset = useCallback(() => {
     pageMapRef.current = new Map();
     pendingBufferRef.current = dryRun ? [] : null;
-    allLogsRef.current = [
-      {
-        ts: 0,
-        absTs: Date.now(),
-        type: "start",
-        level: "info",
-        message: "Process started",
-        raw: { type: "start" },
-      },
-    ];
-    startTimeRef.current = Date.now();
+    allLogsRef.current = [];
     batchDirtyRef.current = false;
     logsDirtyRef.current = false;
     statsDirtyRef.current = false;
     statsFlushRef.current = { scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0, retrying: 0 };
     setStats({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0, retrying: 0 });
     setRows([]);
+    setLogs([]);
+  }, [dryRun]);
+
+  const start = useCallback(() => {
+    cancelledRef.current = false;
+    pausedRef.current = false;
+    reset();
+    startTimeRef.current = Date.now();
+    const dbg = databaseId.slice(0, 8);
+    allLogsRef.current.push({
+      ts: 0,
+      absTs: Date.now(),
+      type: "start",
+      level: "info",
+      message: `Starting — db=${dbg}..., field="${fieldName}", mode=${mode}, dryRun=${dryRun}, skipEmpty=${skipEmpty}`,
+      raw: { type: "start", databaseId, fieldName, mode, dryRun, skipEmpty },
+    });
     setLogs([...allLogsRef.current]);
     setPhase("running");
     runPipeline();
-  }, [dryRun, runPipeline]);
+  }, [dryRun, runPipeline, reset, databaseId, fieldName, mode, skipEmpty]);
 
   const pause = useCallback(() => {
     pausedRef.current = true;
@@ -610,5 +679,5 @@ export function useAutoDeduplicate({
     setPhase("done");
   }, []);
 
-  return { phase, activeStage, stats, rows, logs, allLogsRef, start, pause, resume, stop };
+  return { phase, activeStage, stats, rows, logs, allLogsRef, start, pause, resume, stop, reset };
 }

@@ -111,7 +111,7 @@ function TokenForm({ onConnect, onDisconnect, isConnected }: TokenFormProps) {
               {isConnected ? "Update Token" : "Connect"}
             </Button>
             {isConnected && onDisconnect && (
-              <Button variant="danger" onClick={handleDisconnect}>
+              <Button variant="secondary" onClick={handleDisconnect}>
                 Disconnect
               </Button>
             )}

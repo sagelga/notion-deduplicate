@@ -69,7 +69,11 @@ export function ConfigRow({
         <ConfigRowSpinner />
       ) : (
         <>
-          {selectedProperty && (
+          {properties.length === 0 && selectedDatabaseId ? (
+            <span className="db-config-error">
+              No supported fields found in this database. Deduplication requires title, text, select, number, email, URL, phone, checkbox, or date fields.
+            </span>
+          ) : selectedProperty ? (
             <>
               <ConfigRowField
                 properties={properties}
@@ -101,6 +105,15 @@ export function ConfigRow({
                 </button>
               )}
             </>
+          ) : (
+            properties.length > 0 && (
+              <ConfigRowField
+                properties={properties}
+                selectedProperty={selectedProperty}
+                onPropertySelect={onPropertySelect}
+                isRunning={isRunning}
+              />
+            )
           )}
         </>
       )}

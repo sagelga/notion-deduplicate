@@ -20,6 +20,7 @@
 
 import type { RefObject } from "react";
 import type { LogEntry } from "./dedup-types";
+import Button from "@/components/ui/Button";
 
 // Formats a relative timestamp (ms since session start) as "+MM:SS.cc"
 function fmtTs(ms: number): string {
@@ -64,9 +65,9 @@ export function DedupLogPanel({
           )}
         </span>
         {totalLogCount > 0 && (
-          <button className="auto-log-export" onClick={onExport}>
+          <Button variant="secondary" onClick={onExport}>
             Export JSON
-          </button>
+          </Button>
         )}
       </div>
 

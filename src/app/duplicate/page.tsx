@@ -15,27 +15,34 @@ import DatabaseSelector from "@/components/dedup/DatabaseSelector";
 import MissingNotionToken from "@/components/settings/MissingNotionToken";
 import { useNotionToken } from "@/hooks/useNotionToken";
 import { listDatabases, type NotionDatabase } from "@/lib/notion";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./page.css";
 
 export default function DuplicatePage() {
-  const { token, clearToken } = useNotionToken();
-  const router = useRouter();
-  // null = fetch in flight or not started; array = results (possibly empty)
-  const [databases, setDatabases] = useState<NotionDatabase[] | null>(null);
+  const { token } = useNotionToken();
+  const [databases, setDatabases] = useState<NotionDatabase[] | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
 
-  // Load databases when token is available.
-  // Only calls setState inside async callbacks — avoids cascading renders.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   useEffect(() => {
     if (!token) return;
-    listDatabases(token)
-      .then(setDatabases)
-      .catch((err) => setLoadError(err instanceof Error ? err.message : String(err)));
-  }, [token]);
+    if (databases !== undefined) return;
 
-  // SSR/hydration guard — token is null before localStorage hydrates
-  if (token === null || token === "") {
+    listDatabases(token)
+      .then((data) => {
+        if (isMountedRef.current) setDatabases(data);
+      })
+      .catch((err) => {
+        if (isMountedRef.current) setLoadError(err instanceof Error ? err.message : String(err));
+      });
+  }, [token, databases]);
+
+  if (!token) {
     return (
       <div className="dashboard-wrapper">
         <MissingNotionToken />
@@ -43,14 +50,19 @@ export default function DuplicatePage() {
     );
   }
 
-  // Show database selector
   return (
     <div className="dashboard-wrapper">
       <DashboardHeader
         title="Duplicate"
         subtitle="Select a database and a field to find and remove duplicates"
       />
-      <DatabaseSelector databases={databases ?? []} token={token} />
+      {loadError ? (
+        <div className="dashboard-error">
+          <p>Failed to load databases: {loadError}</p>
+        </div>
+      ) : (
+        <DatabaseSelector databases={databases ?? []} token={token} />
+      )}
     </div>
   );
 }

@@ -229,12 +229,6 @@ export default function AutoDeduplicateView({
         dupGroupCount={dupGroupCount}
       />
 
-      {(isRunning || isPaused) && (
-        <div className="auto-scan-bar-track">
-          <div className={`auto-scan-bar-fill${isPaused ? " auto-scan-bar-fill--paused" : ""}`} />
-        </div>
-      )}
-
       {(isRunning || isPaused || phase === "done") && (
         <DedupStatsBar
           stats={stats}

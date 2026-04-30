@@ -113,14 +113,14 @@
 
 /* Danger: red background */
 .btn--danger {
-  background: var(--nd-danger);
+  background: #b91c1c;
   color: #fff;
-  border-color: var(--nd-danger);
+  border-color: #b91c1c;
 }
 
 .btn--danger:hover:not(:disabled) {
-  opacity: 0.88;
-  background: var(--nd-danger);
+  background: #991b1b;
+  border-color: #991b1b;
 }
 
 /* Cancel: muted text, minimal visual weight */
