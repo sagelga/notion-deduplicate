@@ -1,0 +1,95 @@
+/* AppearanceSettings.css */
+
+.appearance-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.appearance-option {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-left: 3px solid transparent;
+  border-radius: var(--nd-radius-md);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  text-align: left;
+}
+
+.appearance-option:hover {
+  background: var(--nd-bg-hover);
+}
+
+.appearance-option.active {
+  border-left-color: var(--nd-accent);
+  background: var(--nd-accent-bg);
+}
+
+.appearance-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--nd-chip-bg);
+  border-radius: var(--nd-radius-md);
+  color: var(--nd-text-dim);
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.appearance-option.active .appearance-option-icon {
+  background: var(--nd-accent);
+  color: #ffffff;
+}
+
+.appearance-option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.appearance-option-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--nd-text);
+}
+
+.appearance-option-description {
+  font-size: 0.8125rem;
+  color: var(--nd-text-dim);
+}
+
+.appearance-option-radio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--nd-divider-strong);
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease;
+}
+
+.appearance-option.active .appearance-option-radio {
+  border-color: var(--nd-accent);
+}
+
+.appearance-option-radio-dot {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+
+.appearance-option.active .appearance-option-radio-dot {
+  background: var(--nd-accent);
+}

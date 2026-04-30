@@ -1,0 +1,151 @@
+/* ConnectionSettings.css */
+
+.connection-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+}
+
+.connection-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem;
+  background: var(--nd-chip-bg);
+  border: 1px solid var(--nd-divider);
+  border-radius: 20px;
+}
+
+.connection-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.connection-status-dot.connected {
+  background: var(--nd-ok);
+  box-shadow: 0 0 0 2px var(--nd-ok-bg);
+}
+
+.connection-status-dot.disconnected {
+  background: var(--nd-text-faint);
+}
+
+.connection-status-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--nd-text-dim);
+}
+
+.connection-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.connection-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.connection-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--nd-text-dim);
+}
+
+.connection-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.connection-input {
+  flex: 1;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  font-family: var(--nd-mono);
+  color: var(--nd-text);
+  background: var(--nd-bg);
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.connection-input:focus {
+  border-color: var(--nd-accent);
+}
+
+.connection-input::placeholder {
+  color: var(--nd-text-faint);
+  font-family: var(--nd-mono);
+}
+
+.connection-toggle-visibility {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius);
+  color: var(--nd-text-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.connection-toggle-visibility:hover {
+  color: var(--nd-text);
+  background: var(--nd-bg-hover);
+}
+
+.connection-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--nd-danger);
+}
+
+.connection-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.connection-btn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--nd-radius);
+  cursor: pointer;
+  transition: opacity 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.connection-btn-primary {
+  background: var(--nd-accent);
+  color: #ffffff;
+  border: 1px solid var(--nd-accent);
+}
+
+.connection-btn-primary:hover {
+  opacity: 0.88;
+}
+
+.connection-btn-danger {
+  background: transparent;
+  color: var(--nd-danger);
+  border: 1px solid var(--nd-danger);
+}
+
+.connection-btn-danger:hover {
+  background: var(--nd-danger-bg);
+}

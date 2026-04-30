@@ -1,0 +1,117 @@
+/* PrivacySettings.css */
+
+.privacy-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.privacy-category {
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius-md);
+  padding: 0.875rem 1rem;
+}
+
+.privacy-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.privacy-category-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.privacy-category-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--nd-text);
+}
+
+.privacy-category-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.4rem;
+  background: var(--nd-bg-active);
+  color: var(--nd-text-dim);
+  border-radius: 3px;
+}
+
+.privacy-category-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--nd-text-dim);
+  line-height: 1.55;
+}
+
+/* Toggle switch */
+.privacy-toggle {
+  flex-shrink: 0;
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background: var(--nd-divider-strong);
+  border-radius: 11px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.2s ease;
+}
+
+.privacy-toggle--on {
+  background: var(--nd-accent);
+}
+
+.privacy-toggle--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.privacy-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.privacy-toggle--on .privacy-toggle-thumb {
+  transform: translateX(18px);
+}
+
+/* Policy links */
+.privacy-policy-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--nd-divider);
+}
+
+.privacy-policy-link {
+  color: var(--nd-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.15s ease;
+}
+
+.privacy-policy-link:hover {
+  opacity: 0.75;
+}
+
+.privacy-policy-sep {
+  color: var(--nd-divider-strong);
+}

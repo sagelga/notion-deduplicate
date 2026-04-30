@@ -19,7 +19,8 @@ import Script from "next/script";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { DedupProvider } from "@/hooks/useDedup";
-import Navbar from "@/components/layout/Navbar";
+import { LanguageProvider } from "@/hooks/useLanguage";
+import Navbar, { SettingsGear } from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CookieConsentBanner from "@/components/cookies/CookieConsentBanner";
 import "./globals.css";
@@ -78,15 +79,18 @@ export default function RootLayout({
         />
         <ThemeProvider>
           <DedupProvider>
-            <Navbar
-              brandName="notion-tools"
-              links={NAV_LINKS}
-            />
-            <main className="page-content">
-              {children}
-            </main>
-            <Footer />
-            <CookieConsentBanner />
+            <LanguageProvider>
+              <Navbar
+                brandName="notion-tools"
+                links={NAV_LINKS}
+                controls={<SettingsGear />}
+              />
+              <main className="page-content">
+                {children}
+              </main>
+              <Footer />
+              <CookieConsentBanner />
+            </LanguageProvider>
           </DedupProvider>
         </ThemeProvider>
       </body>
