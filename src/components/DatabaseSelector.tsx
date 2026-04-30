@@ -62,6 +62,7 @@ export default function DatabaseSelector({
   const [previewPages, setPreviewPages] = useState<Array<{ id: string; title: string; properties: Record<string, string | null> }>>([]);
   const [previewHasMore, setPreviewHasMore] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [dbTotalCount, setDbTotalCount] = useState<number | undefined>(undefined);
   const [isRunning, setIsRunning] = useState(false);
 
   // Consolidated fetch function: schema + preview in parallel, with shared error handling
@@ -113,6 +114,10 @@ export default function DatabaseSelector({
         if (previewRes.ok) {
           const previewData = await previewRes.json();
           const rawPages: RawNotionPage[] = previewData.results ?? [];
+          // Use total from Notion API if available (some databases expose it)
+          if (typeof previewData.total === "number") {
+            setDbTotalCount(previewData.total);
+          }
 
           // Use fetchedSchema (not the `properties` state) to avoid stale closure.
           const propertyTypeMap = Object.fromEntries(
@@ -170,6 +175,7 @@ export default function DatabaseSelector({
     setIsRunning(false);
     setPreviewPages([]);
     setPreviewHasMore(false);
+    setDbTotalCount(undefined);
 
     if (!databaseId) return;
 
@@ -253,6 +259,7 @@ export default function DatabaseSelector({
         onTimingChange={setAutoTiming}
         onStart={() => { setAutoStarted(true); setIsRunning(true); }}
         skipEmpty={skipEmpty}
+        scanRowCount={dbTotalCount}
         onSkipEmptyChange={(value) => {
           setSkipEmpty(value);
           setAutoStarted(false);
@@ -301,6 +308,11 @@ export default function DatabaseSelector({
           dryRun={autoTiming === "later" && !dryRunConfirmed}
           onConfirm={() => setDryRunConfirmed(true)}
           onPhaseChange={(p) => setIsRunning(p === "running" || p === "paused")}
+          onReset={() => {
+            setAutoStarted(false);
+            setDryRunConfirmed(false);
+            setIsRunning(false);
+          }}
           token={token}
         />
       )}

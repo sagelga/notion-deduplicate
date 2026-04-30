@@ -30,6 +30,118 @@
   gap: 1.5rem;
 }
 
+/* ── S3 Scan view ── */
+.auto-scan-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auto-scan-title-lg {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--nd-text);
+  margin: 0;
+}
+
+.auto-scan-page-count {
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-text-faint);
+}
+
+.auto-scan-complete-tag {
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-ok);
+  background: var(--nd-ok-bg);
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+/* Large counter chips */
+.auto-scan-counters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auto-counter-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius-md);
+  padding: 10px 16px;
+  min-width: 130px;
+}
+
+.auto-counter-chip--accent .auto-counter-value {
+  color: var(--nd-accent);
+}
+
+.auto-counter-chip--ok {
+  background: var(--nd-ok-bg);
+  border-color: var(--nd-ok);
+}
+
+.auto-counter-chip--ok .auto-counter-value {
+  color: var(--nd-ok);
+}
+
+.auto-counter-chip--danger {
+  background: var(--nd-danger-bg);
+  border-color: var(--nd-danger);
+}
+
+.auto-counter-chip--danger .auto-counter-value {
+  color: var(--nd-danger);
+}
+
+.auto-counter-value {
+  font-family: var(--nd-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--nd-text);
+  line-height: 1;
+}
+
+.auto-counter-label {
+  font-size: 12px;
+  color: var(--nd-text-dim);
+  margin-top: 2px;
+}
+
+/* Scan bar — paused state (no animation) */
+.auto-scan-bar-fill--paused {
+  animation: none;
+  width: 50%;
+  opacity: 0.4;
+}
+
+/* Scan controls row */
+.auto-scan-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auto-scan-hint {
+  font-size: 12px;
+  color: var(--nd-text-faint);
+  font-family: var(--nd-mono);
+}
+
+.auto-scan-btns {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
 /* Stats bar — card-chip style matching S3 design */
 .auto-dedup-stats {
   display: flex;
@@ -609,4 +721,64 @@
 @keyframes auto-table-reveal {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Retry counter chip ── */
+.auto-counter-chip--retry {
+  background: rgba(217, 115, 13, 0.08);
+  border-color: rgba(217, 115, 13, 0.35);
+}
+
+.auto-counter-chip--retry .auto-counter-value {
+  color: #d9730d;
+}
+
+/* ── "retry" badge — page is in the retry queue ── */
+.auto-badge--retry {
+  color: #d9730d;
+  background: rgba(217, 115, 13, 0.1);
+}
+
+/* "retry" row — slightly dimmed pending second attempt */
+.auto-row--retry td {
+  opacity: 0.8;
+}
+
+/* ── "error" badge re-semantics — permanent failure after retry ── */
+.auto-badge--error {
+  color: #eb5757;
+  background: rgba(235, 87, 87, 0.1);
+}
+
+/* ── Queue / manual-deletion notice banners ── */
+.auto-queue-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--nd-radius-md, 6px);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.auto-queue-notice__icon {
+  flex-shrink: 0;
+  font-size: 15px;
+  margin-top: 1px;
+}
+
+.auto-queue-notice--info {
+  background: rgba(35, 131, 226, 0.07);
+  border: 1px solid rgba(35, 131, 226, 0.22);
+  color: var(--nd-text-dim, #6b6f73);
+}
+
+.auto-queue-notice--warn {
+  background: rgba(235, 87, 87, 0.06);
+  border: 1px solid rgba(235, 87, 87, 0.25);
+  color: var(--nd-text, #1a1a1a);
+}
+
+.auto-queue-notice--warn strong {
+  color: #eb5757;
 }

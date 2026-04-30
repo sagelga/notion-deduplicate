@@ -1,0 +1,140 @@
+/* DedupDoneView.css — S5 completion screen */
+
+.ddv-wrapper {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ddv-breadcrumb {
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-text-faint);
+  margin: 0;
+}
+
+.ddv-title {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--nd-text);
+  margin: 0;
+}
+
+/* Before / After bars */
+.ddv-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ddv-bar-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--nd-text-dim);
+}
+
+.ddv-bar-count--bold {
+  font-weight: 700;
+  font-family: var(--nd-mono);
+}
+
+.ddv-bar-track {
+  height: 22px;
+  background: var(--nd-divider);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ddv-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 600ms ease;
+}
+
+/* Delta + receipt */
+.ddv-delta-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--nd-divider);
+  border-bottom: 1px solid var(--nd-divider);
+  margin: 4px 0;
+  flex-wrap: wrap;
+}
+
+.ddv-delta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ddv-delta-number {
+  font-family: var(--nd-mono);
+  font-size: 52px;
+  font-weight: 700;
+  color: var(--nd-accent);
+  line-height: 1;
+}
+
+.ddv-delta-label {
+  font-size: 13px;
+  color: var(--nd-text-dim);
+}
+
+.ddv-receipt {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ddv-receipt-line {
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-text-faint);
+}
+
+/* Actions */
+.ddv-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ddv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--nd-radius);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: opacity 80ms, background 80ms;
+  white-space: nowrap;
+}
+
+.ddv-btn--primary {
+  background: var(--nd-text);
+  color: var(--nd-bg);
+  border: 1px solid var(--nd-text);
+}
+
+.ddv-btn--primary:hover {
+  opacity: 0.88;
+}
+
+.ddv-btn--ghost {
+  background: transparent;
+  color: var(--nd-text-dim);
+  border: 1px solid transparent;
+  font-size: 12px;
+}
+
+.ddv-btn--ghost:hover {
+  background: var(--nd-bg-hover);
+}

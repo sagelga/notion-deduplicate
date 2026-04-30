@@ -1,0 +1,76 @@
+/* DedupEmptyView.css — S6 all-clean empty state */
+
+.dev-wrapper {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 60px 40px;
+  gap: 12px;
+}
+
+.dev-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid var(--nd-divider-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  color: var(--nd-text-faint);
+  margin-bottom: 8px;
+}
+
+.dev-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--nd-text);
+  margin: 0;
+}
+
+.dev-desc {
+  color: var(--nd-text-dim);
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.dev-stats {
+  font-family: var(--nd-mono);
+  font-size: 12px;
+  color: var(--nd-text-faint);
+  margin: 0;
+}
+
+.dev-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dev-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--nd-radius);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 80ms;
+  white-space: nowrap;
+}
+
+.dev-btn--ghost {
+  background: transparent;
+  color: var(--nd-text-dim);
+  border: 1px solid var(--nd-divider-strong);
+}
+
+.dev-btn--ghost:hover {
+  background: var(--nd-bg-hover);
+}

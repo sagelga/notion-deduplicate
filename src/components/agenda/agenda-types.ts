@@ -27,7 +27,7 @@ export interface AgendaState {
   isLoading: boolean;
   error: string | null;
   lastSyncedAt: string | null;
-  calendarMode: "week" | "day";
+  calendarMode: "month" | "week" | "day";
   calendarDate: string;
 }
 

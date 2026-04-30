@@ -55,8 +55,8 @@ interface AgendaContextValue {
   setShowDone: (show: boolean) => void;
 
   // Calendar
-  calendarMode: "week" | "day";
-  setCalendarMode: (mode: "week" | "day") => void;
+  calendarMode: "month" | "week" | "day";
+  setCalendarMode: (mode: "month" | "week" | "day") => void;
   calendarDate: string;
   setCalendarDate: (date: string) => void;
 
@@ -114,7 +114,7 @@ export function AgendaProvider({ children }: AgendaProviderProps) {
   });
 
   // Calendar
-  const [calendarMode, setCalendarMode] = useState<"week" | "day">("week");
+  const [calendarMode, setCalendarMode] = useState<"month" | "week" | "day">("month");
   const [calendarDate, setCalendarDate] = useState(() => {
     const now = new Date();
     return now.toISOString().split("T")[0];

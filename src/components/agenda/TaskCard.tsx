@@ -6,7 +6,7 @@
 import { useCallback } from "react";
 import { useAgenda } from "@/hooks/AgendaContext";
 import type { AgendaTask } from "./agenda-types";
-import { Repeat, Clock, AlertCircle, ChevronRight } from "lucide-react";
+import { Repeat, Clock, Flag, ChevronRight } from "lucide-react";
 import "./TaskCard.css";
 
 interface TaskCardProps {
@@ -21,9 +21,9 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
-  high: "High",
-  medium: "Medium",
-  low: "Low",
+  high: "P1",
+  medium: "P2",
+  low: "P3",
 };
 
 export default function TaskCard({ task, onOpenDetail }: TaskCardProps) {
@@ -41,7 +41,7 @@ export default function TaskCard({ task, onOpenDetail }: TaskCardProps) {
     onOpenDetail?.(task);
   }, [onOpenDetail, task]);
 
-  const dueLabel = formatDueLabel(task.dueDate, task.dueTime);
+  const { label: dueLabel, overdue } = formatDueLabel(task.dueDate, task.dueTime);
 
   return (
     <div className={`task-card ${task.done ? "task-card--done" : ""}`} onClick={handleClick}>
@@ -56,12 +56,12 @@ export default function TaskCard({ task, onOpenDetail }: TaskCardProps) {
         <div className="task-card__meta">
           {task.priority && (
             <span className={`task-card__priority ${PRIORITY_COLORS[task.priority]}`}>
-              <AlertCircle size={12} />
+              <Flag size={11} />
               {PRIORITY_LABELS[task.priority]}
             </span>
           )}
           {dueLabel && (
-            <span className="task-card__due">
+            <span className={`task-card__due${overdue && !task.done ? " task-card__due--overdue" : ""}`}>
               <Clock size={12} />
               {dueLabel}
             </span>
@@ -88,8 +88,8 @@ export default function TaskCard({ task, onOpenDetail }: TaskCardProps) {
   );
 }
 
-function formatDueLabel(date: string | null, time: string | null): string | null {
-  if (!date) return null;
+function formatDueLabel(date: string | null, time: string | null): { label: string | null; overdue: boolean } {
+  if (!date) return { label: null, overdue: false };
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -98,14 +98,16 @@ function formatDueLabel(date: string | null, time: string | null): string | null
 
   const diffMs = due.getTime() - today.getTime();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const overdue = diffDays < 0;
 
   let label: string;
   if (diffDays === 0) label = "Today";
   else if (diffDays === 1) label = "Tomorrow";
   else if (diffDays === -1) label = "Yesterday";
+  else if (diffDays < -1) label = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   else if (diffDays > 1 && diffDays <= 7) label = due.toLocaleDateString("en-US", { weekday: "short" });
   else label = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   if (time) label += ` ${time}`;
-  return label;
+  return { label, overdue };
 }

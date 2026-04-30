@@ -1,31 +1,23 @@
 // AutoDeduplicateView.tsx
 //
-// The main view rendered when a deduplication run is active. It orchestrates the
-// useAutoDeduplicate hook and renders all the child UI components (stats bar,
-// results table, log panel, preview/confirm, scan progress).
-//
-// Key design points:
-// - useAutoDeduplicate runs the 3-stage dedup pipeline in the browser; this component
-//   calls its start/pause/resume/stop controls and syncs its phase/stats to local state
-//   and the global dedup context.
-// - DOM updates are batched at 300ms inside useAutoDeduplicate to avoid thrashing React.
-// - dryRun mode: pending rows are buffered during scan and revealed atomically on done.
-// - Logs are stored in allLogsRef for export completeness; a sliced/reversed copy is
-//   pushed to state only for the visible panel (LOG_DISPLAY_LIMIT entries).
-// - Pause is implemented via a mutable ref shared with the parent context so the
-//   pipeline can check it without a React re-render cycle.
+// Orchestrates the deduplication pipeline UI across all phases:
+//   S3 (running/paused) → scan view with large counters + progress bar
+//   S4 (preview)        → DedupReviewGroups keep/delete split cards (dryRun only)
+//   S5 (done)           → DedupDoneView before/after bars + stats
+//   S6 (done + 0 dupes) → DedupEmptyView all-clean state
 
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useDedup } from "@/hooks/useDedup";
 import { useAutoDeduplicate } from "@/hooks/useAutoDeduplicate";
 import type { Mode, Phase, Stats } from "./dedup-types";
-import { DedupStatsBar, type StatFilterKey } from "./DedupStatsBar";
-import { DedupScanProgress } from "./DedupScanProgress";
 import { DedupResultsTable } from "./DedupResultsTable";
-import { DedupPreviewConfirm } from "./DedupPreviewConfirm";
 import { DedupLogPanel } from "./DedupLogPanel";
+import { DedupReviewGroups } from "./DedupReviewGroups";
+import { DedupDoneView } from "./DedupDoneView";
+import { DedupEmptyView } from "./DedupEmptyView";
 import "./AutoDeduplicateView.css";
 
 export default function AutoDeduplicateView({
@@ -37,6 +29,7 @@ export default function AutoDeduplicateView({
   dryRun = false,
   onConfirm,
   onPhaseChange,
+  onReset,
   token,
 }: {
   databaseId: string;
@@ -47,8 +40,10 @@ export default function AutoDeduplicateView({
   dryRun?: boolean;
   onConfirm?: () => void;
   onPhaseChange?: (phase: Phase) => void;
+  onReset?: () => void;
   token: string;
 }) {
+  const router = useRouter();
   const {
     startDedup,
     updateStats: dedupUpdateStats,
@@ -58,12 +53,10 @@ export default function AutoDeduplicateView({
   } = useDedup();
   const [phase, setLocalPhase] = useState<Phase>("running");
   const setPhase = (p: Phase) => { setLocalPhase(p); onPhaseChange?.(p); };
-  const [stats, setStats] = useState<Stats>({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0 });
+  const [stats, setStats] = useState<Stats>({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0, retrying: 0 });
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [activeStage] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<StatFilterKey>("all");
+  const [statusFilter] = useState<string>("all");
 
-  // Call the hook — runs 3-stage pipeline in browser
   const {
     phase: pipelinePhase,
     stats: pipelineStats,
@@ -83,20 +76,13 @@ export default function AutoDeduplicateView({
     dryRun,
   });
 
-  // Auto-scroll control: true = scroll to top automatically, false = user is scrolling manually
   const autoScrollRef = useRef(true);
   const logScrollRef = useRef<HTMLDivElement>(null);
-
-
-  // Control ref for pause — share with context
   const localPausedRef = useRef(false);
+  const startedAtRef = useRef<number>(Date.now());
 
-  // Sync context pausedRef with local
-  useEffect(() => {
-    pausedRef.current = localPausedRef.current;
-  });
+  useEffect(() => { pausedRef.current = localPausedRef.current; });
 
-  // Auto-scroll: when logs update and auto-scroll is on, pin to top (newest entry)
   useEffect(() => {
     if (!autoScrollRef.current || !logScrollRef.current) return;
     logScrollRef.current.scrollTop = 0;
@@ -105,47 +91,27 @@ export default function AutoDeduplicateView({
   const handleLogScroll = () => {
     const el = logScrollRef.current;
     if (!el) return;
-    if (el.scrollTop < 8) {
-      // User scrolled back to top — resume auto-scroll
-      autoScrollRef.current = true;
-    } else if (autoScrollRef.current) {
-      // User scrolled away from top — switch to manual
-      autoScrollRef.current = false;
-    }
+    if (el.scrollTop < 8) autoScrollRef.current = true;
+    else if (autoScrollRef.current) autoScrollRef.current = false;
   };
 
-  // Reset auto-scroll and start the pipeline on mount; register with context for navbar
   useEffect(() => {
     autoScrollRef.current = true;
-    if (!dryRun) {
-      startDedup({ databaseId, databaseName, fieldName, mode });
-    }
+    startedAtRef.current = Date.now();
+    if (!dryRun) startDedup({ databaseId, databaseName, fieldName, mode });
     start();
-    return () => {
-      stopPipeline();
-    };
+    return () => { stopPipeline(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [databaseId, fieldName, mode, skipEmpty, dryRun]);
 
-  // Sync pipeline phase to local state + parent callback
-  useEffect(() => {
-    setPhase(pipelinePhase);
-  }, [pipelinePhase]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPhase(pipelinePhase); }, [pipelinePhase]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setStats(pipelineStats); }, [pipelineStats]);
 
-  // Keep component stats state synced with hook
-  useEffect(() => {
-    setStats(pipelineStats);
-  }, [pipelineStats]);
-
-  // Update global dedup context stats and phase when pipeline updates
   useEffect(() => {
     dedupUpdateStats(pipelineStats);
-    if (pipelinePhase === "done" && !dryRun) {
-      dedupSetPhase("done");
-    }
+    if (pipelinePhase === "done" && !dryRun) dedupSetPhase("done");
   }, [pipelineStats, pipelinePhase, dryRun, dedupUpdateStats, dedupSetPhase]);
 
-  // Capture error message from last error log entry when phase is "error"
   useEffect(() => {
     if (pipelinePhase === "error") {
       const lastError = [...allLogsRef.current].reverse().find((e) => e.level === "error");
@@ -156,56 +122,26 @@ export default function AutoDeduplicateView({
     }
   }, [pipelinePhase, dedupSetErrorMessage]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleStatClick = (key: StatFilterKey) => {
-    setStatusFilter(key);
-  };
-
   const handlePause = () => {
     const nowPaused = !localPausedRef.current;
     localPausedRef.current = nowPaused;
     pausedRef.current = nowPaused;
-    if (nowPaused) {
-      pause();
-    } else {
-      resume();
-    }
+    if (nowPaused) pause(); else resume();
   };
 
   const handleExport = () => {
     const endedAt = new Date().toISOString();
-    // Calculate elapsed time from first log entry's absTs to now
     const firstLog = allLogsRef.current[0];
     const startedAtMs = firstLog?.absTs ?? Date.now();
     const payload = {
-      session: {
-        databaseId,
-        databaseName,
-        fieldName,
-        mode,
-        skipEmpty,
-        dryRun,
-        startedAt: new Date(startedAtMs).toISOString(),
-        endedAt,
-        elapsedMs: Date.now() - startedAtMs,
-      },
+      session: { databaseId, databaseName, fieldName, mode, skipEmpty, dryRun, startedAt: new Date(startedAtMs).toISOString(), endedAt, elapsedMs: Date.now() - startedAtMs },
       summary: stats,
-      // All events in chronological order (ascending)
-      events: allLogsRef.current.map((e) => ({
-        ts: e.ts,
-        timestamp: new Date(e.absTs).toISOString(),
-        type: e.type,
-        level: e.level,
-        message: e.message,
-        raw: e.raw,
-      })),
+      events: allLogsRef.current.map((e) => ({ ts: e.ts, timestamp: new Date(e.absTs).toISOString(), type: e.type, level: e.level, message: e.message, raw: e.raw })),
     };
-
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    const safeName = databaseName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
-    const date = new Date().toISOString().slice(0, 10);
-    a.download = `notion-dedup-${safeName}-${date}.json`;
+    a.download = `notion-dedup-${databaseName.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
     a.href = blobUrl;
     a.click();
     URL.revokeObjectURL(blobUrl);
@@ -213,11 +149,6 @@ export default function AutoDeduplicateView({
 
   const verb = mode === "archive" ? "archived" : "deleted";
 
-  // Filter the full log list down to what's useful to display in the panel.
-  // actioned events are redundant with the stats bar; kept/skipped page events
-  // aren't actionable. progress events are shown so the log doesn't appear
-  // frozen during long scans.
-  // The export (via handleExport) always gets the unfiltered allLogsRef.current.
   const displayLogs = useMemo(
     () => logs.filter((e) => {
       if (e.type === "start") return true;
@@ -228,7 +159,6 @@ export default function AutoDeduplicateView({
     [logs]
   );
 
-  // Filter rows by status when user clicks a stat in the stats bar.
   const filteredRows = useMemo(() => {
     if (statusFilter === "all") return rows;
     if (statusFilter === "pending") return rows.filter((r) => r.status === "pending");
@@ -239,38 +169,157 @@ export default function AutoDeduplicateView({
     return rows;
   }, [rows, statusFilter]);
 
+  // Count unique duplicate groups (field values that have pending rows)
+  const dupGroupCount = useMemo(
+    () => new Set(rows.filter((r) => r.status === "pending").map((r) => r.fieldValue)).size,
+    [rows]
+  );
+
+  const isRunning = phase === "running";
+  const isPaused = phase === "paused";
+
+  // ── S6 empty state ─────────────────────────────────────────────
+  if ((phase === "done" || phase === "preview") && stats.duplicatesFound === 0) {
+    return (
+      <DedupEmptyView
+        stats={stats}
+        fieldName={fieldName}
+        databaseName={databaseName}
+        onChangeDatabase={() => onReset?.()}
+      />
+    );
+  }
+
+  // ── S5 done state (non-dry-run) ────────────────────────────────
+  if (!dryRun && phase === "done" && stats.actioned > 0) {
+    return (
+      <DedupDoneView
+        stats={stats}
+        mode={mode}
+        databaseName={databaseName}
+        fieldName={fieldName}
+        elapsedMs={Date.now() - startedAtRef.current}
+        onScanAnother={() => onReset?.()}
+        onHome={() => router.push("/")}
+      />
+    );
+  }
+
+  // ── S4 review groups (dry-run preview) ─────────────────────────
+  if (dryRun && phase === "preview") {
+    return (
+      <DedupReviewGroups
+        rows={rows}
+        stats={stats}
+        mode={mode}
+        onConfirm={onConfirm}
+        onCancel={() => onReset?.()}
+      />
+    );
+  }
+
   return (
     <div className="auto-dedup-wrapper">
-      <DedupStatsBar
-        stats={stats}
-        verb={verb}
-        phase={phase}
-        activeStage={activeStage}
-        dryRun={dryRun}
-        onPause={handlePause}
-        onStatClick={handleStatClick}
-      />
+      {/* Heading */}
+      <div className="auto-scan-heading">
+        <h1 className="auto-scan-title-lg">
+          {isRunning ? "Scanning…" : isPaused ? "Paused" : "Scan complete"}
+        </h1>
+        {isRunning && (
+          <span className="auto-scan-page-count">
+            {stats.scanned} pages scanned · {databaseName}
+          </span>
+        )}
+        {!isRunning && !isPaused && phase !== "error" && (
+          <span className="auto-scan-complete-tag">
+            {dupGroupCount} groups found
+          </span>
+        )}
+      </div>
+
+      {/* Indeterminate progress bar during scan */}
+      {(isRunning || isPaused) && (
+        <div className="auto-scan-bar-track">
+          <div className={`auto-scan-bar-fill${isPaused ? " auto-scan-bar-fill--paused" : ""}`} />
+        </div>
+      )}
+
+      {/* Large counter chips */}
+      {(isRunning || isPaused || phase === "done") && (
+        <div className="auto-scan-counters">
+          <div className="auto-counter-chip auto-counter-chip--accent">
+            <div className="auto-counter-value">{dupGroupCount}</div>
+            <div className="auto-counter-label">duplicate groups</div>
+          </div>
+          <div className="auto-counter-chip">
+            <div className="auto-counter-value">{stats.scanned}</div>
+            <div className="auto-counter-label">pages scanned</div>
+          </div>
+          {stats.actioned > 0 && (
+            <div className="auto-counter-chip auto-counter-chip--ok">
+              <div className="auto-counter-value">{stats.actioned}</div>
+              <div className="auto-counter-label">{verb}</div>
+            </div>
+          )}
+          {stats.retrying > 0 && (
+            <div className="auto-counter-chip auto-counter-chip--retry">
+              <div className="auto-counter-value">{stats.retrying}</div>
+              <div className="auto-counter-label">retrying</div>
+            </div>
+          )}
+          {stats.errors > 0 && (
+            <div className="auto-counter-chip auto-counter-chip--danger">
+              <div className="auto-counter-value">{stats.errors}</div>
+              <div className="auto-counter-label">failed</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Queue info notice — shown while deletion is running */}
+      {(isRunning || isPaused) && !dryRun && stats.duplicatesFound > 0 && (
+        <div className="auto-queue-notice auto-queue-notice--info">
+          <span className="auto-queue-notice__icon">⏳</span>
+          <span>
+            Deletions are queued due to Notion API limits — pages are removed one at a time.
+            First-attempt failures are retried automatically once.
+          </span>
+        </div>
+      )}
+
+      {/* Manual deletion notice — shown after completion if permanent failures exist */}
+      {phase === "done" && stats.errors > 0 && (
+        <div className="auto-queue-notice auto-queue-notice--warn">
+          <span className="auto-queue-notice__icon">⚠️</span>
+          <div>
+            <strong>{stats.errors} {stats.errors === 1 ? "page" : "pages"} could not be deleted after 2 attempts.</strong>
+            <span> Open each page marked <em>failed</em> in the table below and delete it manually in Notion, or re-run the scan.</span>
+          </div>
+        </div>
+      )}
 
       {phase === "error" && <div className="auto-dedup-error">{errorMessage}</div>}
-      {phase === "paused" && (
-        <div className="auto-dedup-paused">
-          Paused — {stats.scanned} scanned, {stats.actioned} {verb}.
-        </div>
-      )}
-      {phase === "done" && (
-        <div className="auto-dedup-done">
-          Done — {stats.actioned} pages {verb}, {stats.scanned} total scanned.
-        </div>
-      )}
 
-      {dryRun && phase === "running" && <DedupScanProgress stats={stats} />}
-
+      {/* Results table */}
       <DedupResultsTable rows={filteredRows} fieldName={fieldName} dryRun={dryRun} phase={phase} />
 
-      {phase === "preview" && (
-        <DedupPreviewConfirm stats={stats} mode={mode} onConfirm={onConfirm} />
-      )}
+      {/* Controls */}
+      <div className="auto-scan-controls">
+        {isRunning && (
+          <span className="auto-scan-hint">
+            {dryRun ? "preview mode · no changes yet" : "you can start reviewing visible groups now"}
+          </span>
+        )}
+        <div className="auto-scan-btns">
+          {(isRunning || isPaused) && (
+            <button className="auto-pause-btn" onClick={handlePause}>
+              {isPaused ? "Resume" : "Pause"}
+            </button>
+          )}
+        </div>
+      </div>
 
+      {/* Log panel */}
       <DedupLogPanel
         displayLogs={displayLogs}
         totalLogCount={allLogsRef.current.length}

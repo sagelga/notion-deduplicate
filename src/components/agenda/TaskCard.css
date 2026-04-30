@@ -109,6 +109,11 @@
   color: var(--color-text-secondary);
 }
 
+.task-card__due--overdue {
+  color: #dc3545;
+  font-weight: 600;
+}
+
 .task-card__recurring {
   color: var(--color-accent);
 }

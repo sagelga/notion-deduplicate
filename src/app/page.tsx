@@ -45,9 +45,9 @@ export default async function Home() {
               href={isConnected ? "/duplicate" : "/duplicate"}
               className="landing-cta-btn"
             >
-              {isConnected ? "Go to Duplicate →" : "Get started →"}
+              {isConnected ? "Go to Duplicate →" : "Connect with Notion →"}
             </Link>
-            <span className="landing-trust-note">no data stored · free</span>
+            <span className="landing-trust-note">OAuth · no data stored</span>
           </div>
 
           {/* How it works */}

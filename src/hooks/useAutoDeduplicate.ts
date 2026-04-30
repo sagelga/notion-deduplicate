@@ -6,7 +6,9 @@
 // Three-stage concurrent pipeline (same logic as the removed server route):
 //   Stage 1 — fetchWorker: calls paginateDatabase, strips to MinimalPage, pushes to fetchQueue
 //   Stage 2 — matchWorker: O(1) seenMap lookup, oldest page wins, pushes duplicates to deleteQueue
-//   Stage 3 — deleteWorkers (×3) or drainWorkers (×3): archive/delete or preview
+//   Stage 3a — deleteWorkers (×3): drain deleteQueue; on failure push to retryQueue (status "retry")
+//   Stage 3b — retryWorkers (×3): drain retryQueue after all first-attempts done; on failure → "error"
+//   drainWorkers (×3): dry-run preview only
 //
 // Control flow:
 //   cancelledRef — set by stop(); workers exit their loops when true
@@ -87,6 +89,7 @@ export function useAutoDeduplicate({
     duplicatesFound: 0,
     actioned: 0,
     errors: 0,
+    retrying: 0,
   });
   const [rows, setRows] = useState<PageRow[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -100,7 +103,7 @@ export function useAutoDeduplicate({
   const batchDirtyRef = useRef(false);
   const logsDirtyRef = useRef(false);
   const statsDirtyRef = useRef(false);
-  const statsFlushRef = useRef<Stats>({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0 });
+  const statsFlushRef = useRef<Stats>({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0, retrying: 0 });
   // Generation counter: incremented on each start() so stale pipeline runs ignore their own output.
   const runGenRef = useRef(0);
 
@@ -143,6 +146,7 @@ export function useAutoDeduplicate({
     // ── Shared pipeline state (plain arrays; safe without locks — JS is single-threaded) ──
     const fetchQueue: MinimalPage[] = [];
     const deleteQueue: DeleteTask[] = [];
+    const retryQueue: DeleteTask[] = [];   // pages that failed first deletion attempt
     let fetchDone = false;
     let fetchError: Error | null = null;
     let matchDone = false;
@@ -169,6 +173,7 @@ export function useAutoDeduplicate({
         duplicatesFound: statsFlushRef.current.duplicatesFound + (delta.duplicatesFound ?? 0),
         actioned: statsFlushRef.current.actioned + (delta.actioned ?? 0),
         errors: statsFlushRef.current.errors + (delta.errors ?? 0),
+        retrying: statsFlushRef.current.retrying + (delta.retrying ?? 0),
       };
       statsDirtyRef.current = true;
     };
@@ -327,7 +332,8 @@ export function useAutoDeduplicate({
         }
       };
 
-      // ── Stage 3a: deleteWorker (real run) ─────────────────────────────────────
+      // ── Stage 3a: deleteWorker (real run, first attempt) ──────────────────────
+      // On failure: push to retryQueue and mark page as "retry"; permanent errors happen in Stage 3b.
       const createDeleteWorker = (workerId: number) => async () => {
         let stageStarted = false;
         while (!matchDone || deleteQueue.length > 0) {
@@ -344,7 +350,8 @@ export function useAutoDeduplicate({
             );
             stageStarted = true;
           }
-          const { id: pageId, title, fieldValue } = deleteQueue.shift()!;
+          const task = deleteQueue.shift()!;
+          const { id: pageId, title, fieldValue } = task;
           try {
             const action = mode === "archive" ? "Archiving" : "Deleting";
             appendLog(
@@ -367,13 +374,54 @@ export function useAutoDeduplicate({
               `[${pageId.slice(0, 8)}] ${actionedStatus.toUpperCase()} "${title}" — ${fieldName}: ${fieldValue}`
             );
           } catch (err) {
-            addToStats({ errors: 1 });
-            emitPage({ id: pageId, title, fieldValue, status: "error" });
+            // First attempt failed — queue for one retry instead of immediately erroring.
+            retryQueue.push(task);
+            addToStats({ retrying: 1 });
+            emitPage({ id: pageId, title, fieldValue, status: "retry" });
+            appendLog(
+              { type: "actionError", pageId, title, error: err instanceof Error ? err.message : "Unknown" },
+              "warn",
+              `[${pageId.slice(0, 8)}] FAILED (will retry) to ${mode} "${title}": ${err instanceof Error ? err.message : "Unknown"}`
+            );
+          }
+        }
+      };
+
+      // ── Stage 3b: retryWorker (second attempt; runs after all deleteWorkers finish) ──
+      // On failure: mark permanently as "error" with no further retries.
+      const createRetryWorker = (workerId: number) => async () => {
+        if (retryQueue.length === 0) return;
+        appendLog(
+          { type: "stage", stage: "retry" },
+          "info",
+          `[Retry Worker ${workerId}/3] Processing ${retryQueue.length} items in retry queue...`
+        );
+        while (retryQueue.length > 0) {
+          if (cancelledRef.current) return;
+          const { id: pageId, title, fieldValue } = retryQueue.shift()!;
+          addToStats({ retrying: -1 });
+          try {
+            if (mode === "archive") {
+              await archivePage(pageId, token);
+            } else {
+              await deletePage(pageId, token);
+            }
+            addToStats({ actioned: 1 });
+            const actionedStatus = mode === "archive" ? "archived" : "deleted";
+            emitPage({ id: pageId, title, fieldValue, status: actionedStatus as PageRow["status"] });
             const s = statsFlushRef.current;
             appendLog(
-              { type: "actionError", pageId, title, error: err instanceof Error ? err.message : "Unknown", ...s },
+              { type: "actioned", pageId, title, fieldValue, ...s },
+              "info",
+              `[Retry] ${actionedStatus.toUpperCase()} "${title}" — ${fieldName}: ${fieldValue}`
+            );
+          } catch (err) {
+            addToStats({ errors: 1 });
+            emitPage({ id: pageId, title, fieldValue, status: "error" });
+            appendLog(
+              { type: "actionError", pageId, title, error: err instanceof Error ? err.message : "Unknown" },
               "error",
-              `[${pageId.slice(0, 8)}] FAILED to ${mode} "${title}": ${err instanceof Error ? err.message : "Unknown"}`
+              `[Retry][${pageId.slice(0, 8)}] PERMANENT FAILURE — ${mode} "${title}": ${err instanceof Error ? err.message : "Unknown"}. Delete manually in Notion.`
             );
           }
         }
@@ -406,22 +454,38 @@ export function useAutoDeduplicate({
         }
       };
 
-      // ── Orchestrate all workers concurrently ──────────────────────────────────
-      const workers = [fetchWorker(), matchWorker()];
+      // ── Orchestrate all workers ───────────────────────────────────────────────
+      // Phase 1: fetch + match + first-attempt deletes (or preview drains) run concurrently.
+      // Phase 2: retry workers run only after Phase 1 finishes, so retryQueue is fully populated.
       if (!dryRun) {
-        workers.push(
+        await Promise.all([
+          fetchWorker(),
+          matchWorker(),
           createDeleteWorker(1)(),
           createDeleteWorker(2)(),
-          createDeleteWorker(3)()
-        );
+          createDeleteWorker(3)(),
+        ]);
+        if (!cancelledRef.current && retryQueue.length > 0) {
+          appendLog(
+            { type: "stage", stage: "retry" },
+            "info",
+            `Starting retry phase for ${retryQueue.length} item(s)...`
+          );
+          await Promise.all([
+            createRetryWorker(1)(),
+            createRetryWorker(2)(),
+            createRetryWorker(3)(),
+          ]);
+        }
       } else {
-        workers.push(
+        await Promise.all([
+          fetchWorker(),
+          matchWorker(),
           createDrainWorker(1)(),
           createDrainWorker(2)(),
-          createDrainWorker(3)()
-        );
+          createDrainWorker(3)(),
+        ]);
       }
-      await Promise.all(workers);
 
       if (cancelledRef.current) return;
 
@@ -435,10 +499,11 @@ export function useAutoDeduplicate({
       }
 
       const s = statsFlushRef.current;
+      const errorSuffix = s.errors > 0 ? `, ${s.errors} permanently failed (delete manually in Notion)` : "";
       appendLog(
         { type: "done", ...s },
-        "info",
-        `DONE — ${s.scanned} scanned, ${s.duplicatesFound} duplicates found, ${s.actioned} ${mode}d, ${s.errors} errors`
+        s.errors > 0 ? "warn" : "info",
+        `DONE — ${s.scanned} scanned, ${s.duplicatesFound} duplicates found, ${s.actioned} ${mode}d${errorSuffix}`
       );
       setStats({ ...s });
       setPhase(dryRun ? "preview" : "done");
@@ -478,8 +543,8 @@ export function useAutoDeduplicate({
     batchDirtyRef.current = false;
     logsDirtyRef.current = false;
     statsDirtyRef.current = false;
-    statsFlushRef.current = { scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0 };
-    setStats({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0 });
+    statsFlushRef.current = { scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0, retrying: 0 };
+    setStats({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0, retrying: 0 });
     setRows([]);
     setLogs([...allLogsRef.current]);
     setPhase("running");

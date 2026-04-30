@@ -12,9 +12,10 @@ export type Mode = "archive" | "delete";
 //   kept    — oldest occurrence, will not be actioned
 //   archived/deleted — duplicate that was actioned successfully
 //   skipped — duplicate skipped because the field value was null/empty
-//   error   — action was attempted but the Notion API returned an error
+//   retry   — first deletion attempt failed; page is in the retry queue
+//   error   — all attempts exhausted; page must be deleted manually
 //   pending — dryRun mode: duplicate found, action not yet taken
-export type PageStatus = "kept" | "archived" | "deleted" | "skipped" | "error" | "pending";
+export type PageStatus = "kept" | "archived" | "deleted" | "skipped" | "retry" | "error" | "pending";
 
 // Overall phase of the dedup session:
 //   running — stream is open and pages are being processed
@@ -36,6 +37,7 @@ export interface Stats {
   duplicatesFound: number;
   actioned: number;
   errors: number;
+  retrying: number;
 }
 
 export interface LogEntry {

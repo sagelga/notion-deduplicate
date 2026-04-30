@@ -32,8 +32,8 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--color-canvas);
-  border: 1px solid var(--color-rim);
+  background: var(--nd-bg);
+  border: 1px solid var(--nd-divider);
   border-bottom: none;
   border-radius: 16px 16px 0 0;
   width: 100%;
@@ -59,7 +59,7 @@
 .bottom-sheet-drag-handle {
   width: 36px;
   height: 4px;
-  background: var(--color-rim);
+  background: var(--nd-divider);
   border-radius: 2px;
   margin: 0.75rem auto 0;
 }
@@ -70,14 +70,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--color-rim);
+  border-bottom: 1px solid var(--nd-divider);
 }
 
 .bottom-sheet-header h2 {
   margin: 0;
   font-size: 1.0625rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--nd-text);
   letter-spacing: -0.01em;
 }
 
@@ -85,7 +85,7 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--color-muted);
+  color: var(--nd-text-dim);
   padding: 0.3rem;
   display: flex;
   align-items: center;
@@ -95,8 +95,8 @@
 }
 
 .bottom-sheet-close:hover {
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: var(--nd-bg-hover);
+  color: var(--nd-text);
 }
 
 /* Body */

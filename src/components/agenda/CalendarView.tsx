@@ -1,5 +1,5 @@
 // CalendarView.tsx
-// Week and day calendar views
+// Month, week, and day calendar views
 
 "use client";
 
@@ -26,6 +26,19 @@ export default function CalendarView() {
     });
   }, [focusedDate]);
 
+  // 6-week grid covering the current month
+  const monthGrid = useMemo(() => {
+    const year = focusedDate.getFullYear();
+    const month = focusedDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const gridStart = getWeekStart(firstDay);
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(gridStart);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  }, [focusedDate]);
+
   const filteredTasks = useMemo(() => tasks.filter((t) => showDone || !t.done), [tasks, showDone]);
 
   const getTasksForDate = useCallback(
@@ -38,13 +51,17 @@ export default function CalendarView() {
 
   const navigatePrev = useCallback(() => {
     const d = new Date(focusedDate);
-    d.setDate(d.getDate() - (calendarMode === "week" ? 7 : 1));
+    if (calendarMode === "month") d.setMonth(d.getMonth() - 1);
+    else if (calendarMode === "week") d.setDate(d.getDate() - 7);
+    else d.setDate(d.getDate() - 1);
     setCalendarDate(d.toISOString().split("T")[0]);
   }, [focusedDate, calendarMode, setCalendarDate]);
 
   const navigateNext = useCallback(() => {
     const d = new Date(focusedDate);
-    d.setDate(d.getDate() + (calendarMode === "week" ? 7 : 1));
+    if (calendarMode === "month") d.setMonth(d.getMonth() + 1);
+    else if (calendarMode === "week") d.setDate(d.getDate() + 7);
+    else d.setDate(d.getDate() + 1);
     setCalendarDate(d.toISOString().split("T")[0]);
   }, [focusedDate, calendarMode, setCalendarDate]);
 
@@ -55,25 +72,105 @@ export default function CalendarView() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const headerLabel =
-    calendarMode === "week"
-      ? `${weekDates[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${weekDates[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
-      : focusedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const headerLabel = useMemo(() => {
+    if (calendarMode === "month") {
+      return focusedDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    }
+    if (calendarMode === "week") {
+      return `${weekDates[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${weekDates[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    }
+    return focusedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  }, [calendarMode, focusedDate, weekDates]);
 
+  const header = (
+    <div className="calendar-view__header">
+      <Calendar size={20} className="calendar-view__header-icon" />
+      <h2>Calendar</h2>
+      <div className="calendar-view__controls">
+        <div className="calendar-view__mode-group">
+          {(["month", "week", "day"] as const).map((m) => (
+            <button
+              key={m}
+              className={`calendar-view__mode-btn ${calendarMode === m ? "calendar-view__mode-btn--active" : ""}`}
+              onClick={() => setCalendarMode(m)}
+            >
+              {m.charAt(0).toUpperCase() + m.slice(1)}
+            </button>
+          ))}
+        </div>
+        <button className="calendar-view__nav-btn" onClick={navigatePrev}><ChevronLeft size={16} /></button>
+        <button className="calendar-view__today-btn" onClick={navigateToday}>Today</button>
+        <button className="calendar-view__nav-btn" onClick={navigateNext}><ChevronRight size={16} /></button>
+        <span className="calendar-view__label">{headerLabel}</span>
+      </div>
+    </div>
+  );
+
+  // ── Month view ────────────────────────────────────────────────────────────────
+  if (calendarMode === "month") {
+    const currentMonth = focusedDate.getMonth();
+    const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    return (
+      <div className="calendar-view">
+        {header}
+        <div className="calendar-view__month">
+          <div className="calendar-view__month-header">
+            {DAY_NAMES.map((d) => (
+              <div key={d} className="calendar-view__month-day-name">{d}</div>
+            ))}
+          </div>
+          <div className="calendar-view__month-grid">
+            {monthGrid.map((d, i) => {
+              const dateStr = d.toISOString().split("T")[0];
+              const isToday = dateStr === today;
+              const isCurrentMonth = d.getMonth() === currentMonth;
+              const dayTasks = getTasksForDate(d);
+
+              return (
+                <div
+                  key={i}
+                  className={[
+                    "calendar-view__month-cell",
+                    isToday ? "calendar-view__month-cell--today" : "",
+                    !isCurrentMonth ? "calendar-view__month-cell--other" : "",
+                  ].join(" ")}
+                  onClick={() => { setCalendarDate(dateStr); setCalendarMode("day"); }}
+                >
+                  <span className="calendar-view__month-cell-num">{d.getDate()}</span>
+                  <div className="calendar-view__month-cell-tasks">
+                    {dayTasks.slice(0, 3).map((task) => (
+                      <div
+                        key={task.id}
+                        className={[
+                          "calendar-view__month-task",
+                          task.done ? "calendar-view__month-task--done" : "",
+                          task.priority ? `calendar-view__month-task--${task.priority}` : "",
+                        ].join(" ")}
+                        onClick={(e) => { e.stopPropagation(); handleOpenDetail(task); }}
+                      >
+                        {task.title}
+                      </div>
+                    ))}
+                    {dayTasks.length > 3 && (
+                      <div className="calendar-view__month-more">+{dayTasks.length - 3} more</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        {selectedTask && <TaskDetailSheet task={selectedTask} onClose={handleCloseDetail} />}
+      </div>
+    );
+  }
+
+  // ── Week view ─────────────────────────────────────────────────────────────────
   if (calendarMode === "week") {
     return (
       <div className="calendar-view">
-        <div className="calendar-view__header">
-          <Calendar size={24} />
-          <h2>Calendar</h2>
-          <div className="calendar-view__controls">
-            <button className="calendar-view__mode-toggle" onClick={() => setCalendarMode("day")}>Day</button>
-            <button className="calendar-view__nav-btn" onClick={navigatePrev}><ChevronLeft size={16} /></button>
-            <button className="calendar-view__today-btn" onClick={navigateToday}>Today</button>
-            <button className="calendar-view__nav-btn" onClick={navigateNext}><ChevronRight size={16} /></button>
-            <span className="calendar-view__label">{headerLabel}</span>
-          </div>
-        </div>
+        {header}
         <div className="calendar-view__week">
           <div className="calendar-view__day-headers">
             {weekDates.map((d, i) => {
@@ -115,21 +212,12 @@ export default function CalendarView() {
     );
   }
 
+  // ── Day view ──────────────────────────────────────────────────────────────────
   const dayTasks = getTasksForDate(focusedDate);
 
   return (
     <div className="calendar-view">
-      <div className="calendar-view__header">
-        <Calendar size={24} />
-        <h2>Calendar</h2>
-        <div className="calendar-view__controls">
-          <button className="calendar-view__mode-toggle" onClick={() => setCalendarMode("week")}>Week</button>
-          <button className="calendar-view__nav-btn" onClick={navigatePrev}><ChevronLeft size={16} /></button>
-          <button className="calendar-view__today-btn" onClick={navigateToday}>Today</button>
-          <button className="calendar-view__nav-btn" onClick={navigateNext}><ChevronRight size={16} /></button>
-          <span className="calendar-view__label">{headerLabel}</span>
-        </div>
-      </div>
+      {header}
       <div className="calendar-view__day-view">
         {dayTasks.length === 0 ? (
           <div className="calendar-view__day-view-empty">No tasks for this day.</div>

@@ -34,6 +34,8 @@ interface ConfigRowProps {
   skipEmpty: "skip" | "allow";
   onSkipEmptyChange: (value: "skip" | "allow") => void;
   isRunning?: boolean;
+  /** Estimated row count shown in the Scan button label, e.g. "248 rows" */
+  scanRowCount?: number;
 }
 
 // Maps Notion API property type strings to their human-readable names and
@@ -134,6 +136,7 @@ export function ConfigRow({
   skipEmpty,
   onSkipEmptyChange,
   isRunning = false,
+  scanRowCount,
 }: ConfigRowProps) {
   const databaseOptions: ConfigRowDropdownOption[] = databases.map((db) => ({
     value: db.id,
@@ -220,7 +223,7 @@ export function ConfigRow({
               disabled={!selectedDatabaseId || !selectedProperty}
               title="Start deduplication process"
             >
-              ✓
+              {scanRowCount != null ? `Scan ${scanRowCount} rows →` : "Scan →"}
             </button>
           )}
         </>
