@@ -85,5 +85,5 @@ export async function GET(request: Request) {
     path: "/",
   });
 
-  redirect("/duplicate");
+  redirect("/settings");
 }

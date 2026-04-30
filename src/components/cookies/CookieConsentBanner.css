@@ -3,6 +3,9 @@
    GDPR-compliant inline cookie consent banner with category cards,
    toggle switches, policy links, and action buttons.
    All colours from --nd-* design tokens (globals.css).
+
+   Note: cookie-toggle and cookie-btn styles have been removed
+   as the component now uses ui/Toggle and ui/Button.
    ────────────────────────────────────────────────────────────── */
 
 .cookie-banner-body {
@@ -72,45 +75,6 @@
   line-height: 1.55;
 }
 
-/* ── Toggle switch ── */
-.cookie-toggle {
-  flex-shrink: 0;
-  position: relative;
-  width: 40px;
-  height: 22px;
-  background: var(--nd-divider-strong);
-  border-radius: 11px;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: background-color 0.2s ease;
-}
-
-.cookie-toggle--on {
-  background: var(--nd-accent);
-}
-
-.cookie-toggle--disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.cookie-toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
-  background: #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease;
-}
-
-.cookie-toggle--on .cookie-toggle-thumb {
-  transform: translateX(18px);
-}
-
 /* ── Policy links ── */
 .cookie-policy-links {
   display: flex;
@@ -136,48 +100,14 @@
   color: var(--nd-divider-strong);
 }
 
-/* ── Action buttons ── */
+/* ── Action buttons — uses ui/Button with block prop ── */
 .cookie-actions {
   display: flex;
   gap: 0.5rem;
 }
 
-.cookie-btn {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: opacity 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.cookie-btn-primary {
-  background: var(--nd-accent);
-  color: #ffffff;
-  border: 1px solid var(--nd-accent);
-}
-
-.cookie-btn-primary:hover {
-  opacity: 0.88;
-}
-
-.cookie-btn-secondary {
-  background: transparent;
-  color: var(--nd-text-dim);
-  border: 1px solid var(--nd-divider-strong);
-}
-
-.cookie-btn-secondary:hover {
-  border-color: var(--nd-accent);
-  color: var(--nd-accent);
-}
-
 @media (max-width: 400px) {
   .cookie-actions {
     flex-direction: column;
-  }
-  .cookie-btn-primary {
-    order: -1;
   }
 }

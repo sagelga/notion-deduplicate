@@ -108,41 +108,7 @@
   accent-color: var(--color-accent);
 }
 
-.agenda-shell__sync-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: 1px solid var(--color-rim);
-  border-radius: 8px;
-  background: var(--color-canvas);
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.agenda-shell__sync-btn:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  background: var(--color-surface);
-}
-
-.agenda-shell__sync-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.agenda-shell__sync-btn--spinning {
-  animation: agenda-spin 1s linear infinite;
-}
-
-@keyframes agenda-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
+/* Sync status */
 .agenda-shell__sync-status {
   font-size: 11px;
   color: var(--color-muted);

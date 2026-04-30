@@ -4,9 +4,9 @@
 // fetches the list of accessible databases client-side, and passes them to
 // DatabaseSelector for the user to configure and launch deduplication.
 //
-// If no token is present the user sees the setup form to connect.
-// If the Notion API call fails, an inline error card is shown with a logout
-// button so the user can try a different token without getting stuck.
+// If no token is present the user sees a NotConfiguredView card that links to
+// the Settings page. If the Notion API call fails, an inline error card is
+// shown with a logout button so the user can try a different token.
 
 "use client";
 
@@ -14,28 +14,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useNotionToken } from "@/hooks/useNotionToken";
 import { listDatabases, type NotionDatabase } from "@/lib/notion";
-import DatabaseSelector from "@/components/DatabaseSelector";
-import SetupForm from "@/components/SetupForm";
+import DatabaseSelector from "@/components/dedup/DatabaseSelector";
+import NotConfiguredView from "@/components/dedup/NotConfiguredView";
 import "./page.css";
 
 export default function DuplicatePage() {
-  const { token, setToken, clearToken } = useNotionToken();
+  const { token, clearToken } = useNotionToken();
   const router = useRouter();
   // null = fetch in flight or not started; array = results (possibly empty)
   const [databases, setDatabases] = useState<NotionDatabase[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-
-  // Pick up OAuth token from short-lived cookie (set by /api/auth/callback)
-  useEffect(() => {
-    const cookieToken = document.cookie
-      .split("; ")
-      .find((r) => r.startsWith("notion_token="))
-      ?.split("=")[1];
-    if (cookieToken) {
-      setToken(decodeURIComponent(cookieToken));
-      document.cookie = "notion_token=; maxAge=0; path=/";
-    }
-  }, [setToken]);
 
   // Load databases when token is available.
   // Only calls setState inside async callbacks — avoids cascading renders.
@@ -54,18 +42,18 @@ export default function DuplicatePage() {
     return <div className="dashboard-wrapper" />;
   }
 
-  // Show setup form if no token is present
+  // Show "not configured" card if no token is present
   if (!token) {
     return (
       <div className="dashboard-wrapper">
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Duplicate</h1>
-            <p className="dashboard-subtitle">Connect your Notion token to get started</p>
+            <p className="dashboard-subtitle">Connect your Notion integration to get started</p>
           </div>
         </div>
         <div className="dashboard-setup-container">
-          <SetupForm />
+          <NotConfiguredView />
         </div>
       </div>
     );

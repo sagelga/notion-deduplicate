@@ -1,7 +1,8 @@
 /* ──────────────────────────────────────────────────────────────
    Button.module.css — atomic button component
-   Variants: default | primary | secondary | ghost | danger | cancel
-   Sizes: default | sm
+   Variants: default | primary | secondary | ghost | danger | cancel |
+             notion | danger-outlined
+   Sizes: default | sm | lg
 
    Uses --nd-* design tokens for full light/dark support.
    ────────────────────────────────────────────────────────────── */
@@ -10,6 +11,7 @@
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 5px 10px;
   border-radius: var(--nd-radius);
@@ -19,9 +21,10 @@
   font: inherit;
   font-size: 13.5px;
   cursor: pointer;
-  transition: background 80ms;
+  transition: background 80ms, border-color 80ms;
   white-space: nowrap;
   line-height: 1.4;
+  position: relative;
 }
 
 .btn:hover:not(:disabled) {
@@ -33,10 +36,39 @@
   cursor: not-allowed;
 }
 
+/* ── Icon ── */
+.btn-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 /* ── Sizes ── */
 .btn--sm {
   padding: 3px 8px;
   font-size: 12.5px;
+}
+
+.btn--lg {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* ── Block (full width) ── */
+.btn--block {
+  flex: 1;
+}
+
+/* ── Right alignment ── */
+.btn--right {
+  margin-left: auto;
+}
+
+/* ── Hover border (instead of background) ── */
+.btn--hover-border:hover:not(:disabled) {
+  background: transparent;
+  border-color: var(--nd-accent);
 }
 
 /* ── Variants ── */
@@ -60,10 +92,13 @@
 .btn--secondary {
   background: transparent;
   border-color: var(--nd-divider-strong);
+  color: var(--nd-text-dim);
 }
 
 .btn--secondary:hover:not(:disabled) {
   background: var(--nd-bg-hover);
+  border-color: var(--nd-accent);
+  color: var(--nd-accent);
 }
 
 /* Ghost: fully transparent */
@@ -98,4 +133,27 @@
 .btn--cancel:hover:not(:disabled) {
   background: var(--nd-bg-hover);
   color: var(--nd-text);
+}
+
+/* Notion: opens external link style (hover changes border to accent) */
+.btn--notion {
+  background: var(--color-canvas);
+  color: var(--nd-text);
+  border-color: var(--nd-divider-strong);
+}
+
+.btn--notion:hover:not(:disabled) {
+  background: transparent;
+  border-color: var(--nd-accent);
+}
+
+/* Danger outlined: transparent bg, danger border */
+.btn--danger-outlined {
+  background: transparent;
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.3);
+}
+
+.btn--danger-outlined:hover:not(:disabled) {
+  background: rgba(220, 53, 69, 0.1);
 }

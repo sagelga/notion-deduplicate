@@ -103,6 +103,7 @@
 
 .task-detail__select { cursor: pointer; }
 
+/* Actions — uses ui/Button */
 .task-detail__actions {
   display: flex;
   gap: 8px;
@@ -110,44 +111,6 @@
   padding-top: 16px;
   border-top: 1px solid var(--color-rim);
 }
-
-.task-detail__action-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  border: 1px solid var(--color-rim);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.task-detail__action-btn--notion {
-  background: var(--color-canvas);
-  color: var(--color-text);
-}
-
-.task-detail__action-btn--notion:hover { border-color: var(--color-accent); }
-
-.task-detail__action-btn--delete {
-  background: transparent;
-  color: #dc3545;
-  border-color: rgba(220, 53, 69, 0.3);
-}
-
-.task-detail__action-btn--delete:hover { background: rgba(220, 53, 69, 0.1); }
-
-.task-detail__action-btn--save {
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
-  border-color: var(--color-accent);
-  margin-left: auto;
-}
-
-.task-detail__action-btn--save:hover:not(:disabled) { background: var(--color-accent-hover); }
-.task-detail__action-btn--save:disabled { opacity: 0.6; cursor: not-allowed; }
 
 @media (min-width: 768px) {
   .task-detail-sheet {

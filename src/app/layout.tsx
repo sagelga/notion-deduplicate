@@ -22,7 +22,7 @@ import { DedupProvider } from "@/hooks/useDedup";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import Navbar, { SettingsGear } from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import CookieConsentBanner from "@/components/cookies/CookieConsentBanner";
+import CookieConsentBanner from "@/components/ui/_legacy/CookieConsentBanner";
 import "./globals.css";
 
 interface NavItem {

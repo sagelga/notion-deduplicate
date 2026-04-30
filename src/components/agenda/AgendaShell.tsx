@@ -12,11 +12,11 @@ import {
   Inbox,
   Sun,
   Clock,
-  RefreshCw,
   CheckSquare,
   Menu,
   X,
 } from "lucide-react";
+import { SyncButton } from "@/components/ui";
 import "./AgendaShell.css";
 
 interface AgendaShellProps {
@@ -44,14 +44,15 @@ export default function AgendaShell({ children }: AgendaShellProps) {
   const { sync } = useAgendaSync();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleSync = useCallback(() => sync(), [sync]);
+  const handleSync = useCallback(() => sync(currentView), [sync, currentView]);
 
   const handleViewChange = useCallback(
     (view: AgendaView) => {
       setCurrentView(view);
+      sync(view);
       setSidebarOpen(false);
     },
-    [setCurrentView]
+    [setCurrentView, sync]
   );
 
   const lastSyncLabel = lastSyncedAt
@@ -101,10 +102,11 @@ export default function AgendaShell({ children }: AgendaShellProps) {
             <span>Show done</span>
           </label>
 
-          <button className="agenda-shell__sync-btn" onClick={handleSync} disabled={isLoading}>
-            <RefreshCw size={16} className={isLoading ? "agenda-shell__sync-btn--spinning" : ""} />
-            <span>{isLoading ? "Syncing..." : "Sync"}</span>
-          </button>
+          <SyncButton
+            isLoading={isLoading}
+            onClick={handleSync}
+            label="Syncing..."
+          />
 
           <div className="agenda-shell__sync-status">{lastSyncLabel}</div>
         </div>

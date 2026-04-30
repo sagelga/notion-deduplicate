@@ -27,6 +27,7 @@ import {
 } from "@/lib/notion";
 import type { RawNotionPage } from "@/lib/notion";
 import type { Mode, Phase, PageRow, Stats, LogEntry } from "@/components/dedup-types";
+import { NotionCache } from "@/lib/cache";
 
 const LOG_DISPLAY_LIMIT = 500;
 
@@ -63,6 +64,7 @@ export interface UseAutoDedupOptions {
 
 export interface UseAutoDedupReturn {
   phase: Phase;
+  activeStage: string;
   stats: Stats;
   rows: PageRow[];
   /** Display slice: last 500 log entries, reversed (newest first). */
@@ -93,6 +95,7 @@ export function useAutoDeduplicate({
   });
   const [rows, setRows] = useState<PageRow[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [activeStage, setActiveStage] = useState<string>("");
 
   const pageMapRef = useRef<Map<string, PageRow>>(new Map());
   const pendingBufferRef = useRef<PageRow[] | null>(dryRun ? [] : null);
@@ -194,7 +197,6 @@ export function useAutoDeduplicate({
     };
 
     try {
-      // Fetch schema once before kicking off workers — provides fieldType and titlePropName.
       const schema = await getDatabaseSchema(databaseId, token);
       const propertyTypeMap = Object.fromEntries(schema.map((p) => [p.name, p.type]));
       const fieldType = propertyTypeMap[fieldName];
@@ -206,29 +208,30 @@ export function useAutoDeduplicate({
         return;
       }
 
+      const cacheKey = `dedup:${databaseId}`;
+      const cached = NotionCache.get<RawNotionPage[]>(cacheKey, "short");
+      const pagesFromCache: RawNotionPage[] | null = cached ?? null;
+
       // ── Stage 1: fetchWorker ──────────────────────────────────────────────────
       const fetchWorker = async () => {
+        setActiveStage("fetch");
         try {
-          appendLog({ type: "stage", stage: "fetch" }, "info", "Fetching pages from Notion...");
-          let batchNum = 0;
-          for await (const batch of paginateDatabase(databaseId, token)) {
-            if (cancelledRef.current) return;
-            batchNum++;
+          if (pagesFromCache) {
             appendLog(
-              { type: "notionAPI" },
+              { type: "stage", stage: "fetch" },
               "info",
-              `Fetching batch ${batchNum} (${batch.length} pages)`
+              `Using cached pages (${pagesFromCache.length} pages, < 30s old)`
             );
-            for (const rawPage of batch) {
+            for (const rawPage of pagesFromCache) {
               if (cancelledRef.current) return;
               let title = "(Untitled)";
               if (titlePropName) {
-                const titleProp = (rawPage as RawNotionPage).properties[titlePropName];
+                const titleProp = rawPage.properties[titlePropName];
                 if (titleProp && "title" in titleProp) {
                   title = titleProp.title?.[0]?.plain_text ?? "(Untitled)";
                 }
               }
-              const fieldProp = (rawPage as RawNotionPage).properties[fieldName];
+              const fieldProp = rawPage.properties[fieldName];
               const fieldValue = fieldProp
                 ? (getPropertyValue(fieldProp, fieldType) ?? "(empty)")
                 : "(empty)";
@@ -239,12 +242,47 @@ export function useAutoDeduplicate({
                 fieldValue,
               });
             }
+          } else {
+            appendLog({ type: "stage", stage: "fetch" }, "info", "Fetching pages from Notion...");
+            const allRawPages: RawNotionPage[] = [];
+            let batchNum = 0;
+            for await (const batch of paginateDatabase(databaseId, token)) {
+              if (cancelledRef.current) return;
+              batchNum++;
+              appendLog(
+                { type: "notionAPI" },
+                "info",
+                `Fetching batch ${batchNum} (${batch.length} pages)`
+              );
+              for (const rawPage of batch) {
+                if (cancelledRef.current) return;
+                allRawPages.push(rawPage);
+                let title = "(Untitled)";
+                if (titlePropName) {
+                  const titleProp = rawPage.properties[titlePropName];
+                  if (titleProp && "title" in titleProp) {
+                    title = titleProp.title?.[0]?.plain_text ?? "(Untitled)";
+                  }
+                }
+                const fieldProp = rawPage.properties[fieldName];
+                const fieldValue = fieldProp
+                  ? (getPropertyValue(fieldProp, fieldType) ?? "(empty)")
+                  : "(empty)";
+                fetchQueue.push({
+                  id: rawPage.id,
+                  created_time: rawPage.created_time,
+                  title,
+                  fieldValue,
+                });
+              }
+            }
+            NotionCache.set(cacheKey, allRawPages);
+            appendLog(
+              { type: "stage", stage: "fetch" },
+              "info",
+              `Fetched ${batchNum} batches`
+            );
           }
-          appendLog(
-            { type: "stage", stage: "fetch" },
-            "info",
-            `Fetched ${batchNum} batches`
-          );
         } catch (err) {
           fetchError = err instanceof Error ? err : new Error(String(err));
         } finally {
@@ -254,6 +292,7 @@ export function useAutoDeduplicate({
 
       // ── Stage 2: matchWorker ──────────────────────────────────────────────────
       const matchWorker = async () => {
+        setActiveStage("match");
         try {
           let stageStarted = false;
           while (!fetchDone || fetchQueue.length > 0) {
@@ -335,6 +374,7 @@ export function useAutoDeduplicate({
       // ── Stage 3a: deleteWorker (real run, first attempt) ──────────────────────
       // On failure: push to retryQueue and mark page as "retry"; permanent errors happen in Stage 3b.
       const createDeleteWorker = (workerId: number) => async () => {
+        setActiveStage("delete");
         let stageStarted = false;
         while (!matchDone || deleteQueue.length > 0) {
           if (cancelledRef.current) return;
@@ -429,6 +469,7 @@ export function useAutoDeduplicate({
 
       // ── Stage 3b: drainWorker (dry-run) ───────────────────────────────────────
       const createDrainWorker = (workerId: number) => async () => {
+        setActiveStage("preview");
         let stageStarted = false;
         while (!matchDone || deleteQueue.length > 0) {
           if (cancelledRef.current) return;
@@ -506,6 +547,7 @@ export function useAutoDeduplicate({
         `DONE — ${s.scanned} scanned, ${s.duplicatesFound} duplicates found, ${s.actioned} ${mode}d${errorSuffix}`
       );
       setStats({ ...s });
+      setActiveStage("");
       setPhase(dryRun ? "preview" : "done");
     } catch (err) {
       if (!cancelledRef.current) {
@@ -564,8 +606,9 @@ export function useAutoDeduplicate({
   const stop = useCallback(() => {
     cancelledRef.current = true;
     pausedRef.current = false;
+    setActiveStage("");
     setPhase("done");
   }, []);
 
-  return { phase, stats, rows, logs, allLogsRef, start, pause, resume, stop };
+  return { phase, activeStage, stats, rows, logs, allLogsRef, start, pause, resume, stop };
 }

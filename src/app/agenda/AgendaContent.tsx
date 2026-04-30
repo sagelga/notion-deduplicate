@@ -25,12 +25,12 @@ export default function AgendaContent() {
 }
 
 function AgendaShellWrapper() {
-  const { currentView, notifications, removeNotification, isLoading } = useAgenda();
+  const { currentView, notifications, removeNotification, isLoading, defaultView } = useAgenda();
   const { sync } = useAgendaSync();
 
   useEffect(() => {
-    sync();
-  }, [sync]);
+    sync(defaultView);
+  }, [sync, defaultView]);
 
   const renderView = () => {
     switch (currentView) {

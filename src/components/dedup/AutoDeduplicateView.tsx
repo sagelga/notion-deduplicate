@@ -18,6 +18,7 @@ import { DedupLogPanel } from "./DedupLogPanel";
 import { DedupReviewGroups } from "./DedupReviewGroups";
 import { DedupDoneView } from "./DedupDoneView";
 import { DedupEmptyView } from "./DedupEmptyView";
+import { DedupStatsBar } from "./DedupStatsBar";
 import "./AutoDeduplicateView.css";
 
 export default function AutoDeduplicateView({
@@ -55,10 +56,11 @@ export default function AutoDeduplicateView({
   const setPhase = (p: Phase) => { setLocalPhase(p); onPhaseChange?.(p); };
   const [stats, setStats] = useState<Stats>({ scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0, retrying: 0 });
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [statusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const {
     phase: pipelinePhase,
+    activeStage,
     stats: pipelineStats,
     rows,
     logs,
@@ -244,36 +246,17 @@ export default function AutoDeduplicateView({
         </div>
       )}
 
-      {/* Large counter chips */}
+      {/* Stats bar with click-to-filter counters */}
       {(isRunning || isPaused || phase === "done") && (
-        <div className="auto-scan-counters">
-          <div className="auto-counter-chip auto-counter-chip--accent">
-            <div className="auto-counter-value">{dupGroupCount}</div>
-            <div className="auto-counter-label">duplicate groups</div>
-          </div>
-          <div className="auto-counter-chip">
-            <div className="auto-counter-value">{stats.scanned}</div>
-            <div className="auto-counter-label">pages scanned</div>
-          </div>
-          {stats.actioned > 0 && (
-            <div className="auto-counter-chip auto-counter-chip--ok">
-              <div className="auto-counter-value">{stats.actioned}</div>
-              <div className="auto-counter-label">{verb}</div>
-            </div>
-          )}
-          {stats.retrying > 0 && (
-            <div className="auto-counter-chip auto-counter-chip--retry">
-              <div className="auto-counter-value">{stats.retrying}</div>
-              <div className="auto-counter-label">retrying</div>
-            </div>
-          )}
-          {stats.errors > 0 && (
-            <div className="auto-counter-chip auto-counter-chip--danger">
-              <div className="auto-counter-value">{stats.errors}</div>
-              <div className="auto-counter-label">failed</div>
-            </div>
-          )}
-        </div>
+        <DedupStatsBar
+          stats={stats}
+          verb={verb}
+          phase={phase}
+          activeStage={activeStage}
+          dryRun={dryRun}
+          onPause={isPaused ? resume : pause}
+          onStatClick={setStatusFilter}
+        />
       )}
 
       {/* Queue info notice — shown while deletion is running */}

@@ -1,0 +1,102 @@
+/* ──────────────────────────────────────────────────────────────
+   SetupForm.css — Notion token setup form (components/SetupForm.tsx)
+   Purpose: Styles the token input form shown to unauthenticated users
+   on the landing page. The carousel/stepper styles have been moved
+   to ConnectionSettings.css on the Settings page.
+
+   Conventions:
+   - .setup-error uses a hardcoded red (#eb5757) consistent with the
+     app-wide error colour used in dedup views; no token exists for it.
+   - .setup-hint code uses --color-surface + --color-rim border to
+     match the existing code snippet style in other components.
+   ────────────────────────────────────────────────────────────── */
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  text-align: left;
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.setup-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.setup-input {
+  width: 100%;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-rim);
+  color: var(--color-text);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.1s, box-shadow 0.1s;
+  box-sizing: border-box;
+}
+
+/* Focus ring uses raw rgba because --color-accent has no triplet token;
+   0.15 alpha keeps the ring visible but subtle. */
+.setup-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.15);
+}
+
+.setup-input::placeholder {
+  color: var(--color-muted);
+}
+
+.setup-error {
+  font-size: 0.8125rem;
+  color: #eb5757;
+}
+
+.setup-hint {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.setup-hint a {
+  color: var(--color-accent);
+}
+
+.setup-hint code {
+  background: var(--color-surface);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.8125rem;
+  border: 1px solid var(--color-rim);
+}
+
+.setup-submit-btn {
+  width: 100%;
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-family: inherit;
+}
+
+.setup-submit-btn:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.setup-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

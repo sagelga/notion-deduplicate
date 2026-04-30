@@ -29,6 +29,12 @@ import type {
 const LS_DB_ID = "agenda:databaseId";
 const LS_DB_NAME = "agenda:databaseName";
 const LS_SHOW_DONE = "agenda:showDone";
+const LS_DEFAULT_VIEW = "agenda:defaultView";
+const LS_CAL_START_DAY = "agenda:calendarStartDay";
+const LS_CAL_DEFAULT_MODE = "agenda:calendarDefaultMode";
+const LS_DATE_FORMAT = "agenda:dateFormat";
+const LS_QADD_PRIORITY = "agenda:quickAddDefaultPriority";
+const LS_QADD_LABELS = "agenda:quickAddDefaultLabels";
 
 interface AgendaContextValue {
   // Database selection
@@ -69,6 +75,20 @@ interface AgendaContextValue {
   toggleTaskDone: (taskId: string, done: boolean) => void;
   removeTask: (taskId: string) => void;
   updateTask: (taskId: string, updates: Partial<AgendaTask>) => void;
+
+  // Settings (persisted to localStorage)
+  defaultView: AgendaView;
+  setDefaultView: (v: AgendaView) => void;
+  calendarStartDay: string;
+  setCalendarStartDay: (v: string) => void;
+  calendarDefaultMode: "month" | "week" | "day";
+  setCalendarDefaultMode: (v: "month" | "week" | "day") => void;
+  dateFormat: string;
+  setDateFormat: (v: string) => void;
+  quickAddDefaultPriority: string;
+  setQuickAddDefaultPriority: (v: string) => void;
+  quickAddDefaultLabels: string;
+  setQuickAddDefaultLabels: (v: string) => void;
 }
 
 const AgendaContext = createContext<AgendaContextValue | null>(null);
@@ -120,6 +140,26 @@ export function AgendaProvider({ children }: AgendaProviderProps) {
     return now.toISOString().split("T")[0];
   });
 
+  // Settings (persisted)
+  const [defaultView, setDefaultViewState] = useState<AgendaView>(() => {
+    try { return (localStorage.getItem(LS_DEFAULT_VIEW) as AgendaView) || "today"; } catch { return "today"; }
+  });
+  const [calendarStartDay, setCalendarStartDayState] = useState(() => {
+    try { return localStorage.getItem(LS_CAL_START_DAY) || "sunday"; } catch { return "sunday"; }
+  });
+  const [calendarDefaultMode, setCalendarDefaultModeState] = useState<"month" | "week" | "day">(() => {
+    try { return (localStorage.getItem(LS_CAL_DEFAULT_MODE) as "month" | "week" | "day") || "month"; } catch { return "month"; }
+  });
+  const [dateFormat, setDateFormatState] = useState(() => {
+    try { return localStorage.getItem(LS_DATE_FORMAT) || "system"; } catch { return "system"; }
+  });
+  const [quickAddDefaultPriority, setQuickAddDefaultPriorityState] = useState(() => {
+    try { return localStorage.getItem(LS_QADD_PRIORITY) || "medium"; } catch { return "medium"; }
+  });
+  const [quickAddDefaultLabels, setQuickAddDefaultLabelsState] = useState(() => {
+    try { return localStorage.getItem(LS_QADD_LABELS) || ""; } catch { return ""; }
+  });
+
   // Notifications
   const [notifications, setNotifications] = useState<AgendaNotification[]>([]);
   const notificationIdRef = useRef(0);
@@ -142,6 +182,36 @@ export function AgendaProvider({ children }: AgendaProviderProps) {
     } catch {
       // ignore
     }
+  }, []);
+
+  const setDefaultView = useCallback((v: AgendaView) => {
+    setDefaultViewState(v);
+    try { localStorage.setItem(LS_DEFAULT_VIEW, v); } catch { /* ignore */ }
+  }, []);
+
+  const setCalendarStartDay = useCallback((v: string) => {
+    setCalendarStartDayState(v);
+    try { localStorage.setItem(LS_CAL_START_DAY, v); } catch { /* ignore */ }
+  }, []);
+
+  const setCalendarDefaultMode = useCallback((v: "month" | "week" | "day") => {
+    setCalendarDefaultModeState(v);
+    try { localStorage.setItem(LS_CAL_DEFAULT_MODE, v); } catch { /* ignore */ }
+  }, []);
+
+  const setDateFormat = useCallback((v: string) => {
+    setDateFormatState(v);
+    try { localStorage.setItem(LS_DATE_FORMAT, v); } catch { /* ignore */ }
+  }, []);
+
+  const setQuickAddDefaultPriority = useCallback((v: string) => {
+    setQuickAddDefaultPriorityState(v);
+    try { localStorage.setItem(LS_QADD_PRIORITY, v); } catch { /* ignore */ }
+  }, []);
+
+  const setQuickAddDefaultLabels = useCallback((v: string) => {
+    setQuickAddDefaultLabelsState(v);
+    try { localStorage.setItem(LS_QADD_LABELS, v); } catch { /* ignore */ }
   }, []);
 
   const addNotification = useCallback(
@@ -208,6 +278,18 @@ export function AgendaProvider({ children }: AgendaProviderProps) {
       toggleTaskDone,
       removeTask,
       updateTask,
+      defaultView,
+      setDefaultView,
+      calendarStartDay,
+      setCalendarStartDay,
+      calendarDefaultMode,
+      setCalendarDefaultMode,
+      dateFormat,
+      setDateFormat,
+      quickAddDefaultPriority,
+      setQuickAddDefaultPriority,
+      quickAddDefaultLabels,
+      setQuickAddDefaultLabels,
     }),
     [
       selectedDatabaseId,
@@ -228,6 +310,18 @@ export function AgendaProvider({ children }: AgendaProviderProps) {
       toggleTaskDone,
       removeTask,
       updateTask,
+      defaultView,
+      setDefaultView,
+      calendarStartDay,
+      setCalendarStartDay,
+      calendarDefaultMode,
+      setCalendarDefaultMode,
+      dateFormat,
+      setDateFormat,
+      quickAddDefaultPriority,
+      setQuickAddDefaultPriority,
+      quickAddDefaultLabels,
+      setQuickAddDefaultLabels,
     ]
   );
 

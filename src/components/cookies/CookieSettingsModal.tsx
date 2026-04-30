@@ -16,6 +16,7 @@
 
 import React, { useEffect, useState } from "react";
 import BottomSheet from "@/components/ui/BottomSheet";
+import { Button, Toggle } from "@/components/ui";
 import { getCookiePreferences, setCookiePreferences } from "@/utils/cookies";
 import "./CookieSettingsModal.css";
 
@@ -71,11 +72,12 @@ const CookieSettingsModal: React.FC<CookieSettingsModalProps> = ({
               <h3 className="cookie-category-name">Functional</h3>
               <span className="cookie-category-badge">Required</span>
             </div>
-            <div className="cookie-category-toggle disabled" aria-hidden="true">
-              <div className="toggle-track toggle-on">
-                <div className="toggle-thumb" />
-              </div>
-            </div>
+            <Toggle
+              checked={true}
+              onChange={() => {}}
+              disabled
+              aria-label="Functional cookies are always active"
+            />
           </div>
           <p className="cookie-category-description">
             Essential for the website to function. These cannot be disabled.
@@ -88,19 +90,11 @@ const CookieSettingsModal: React.FC<CookieSettingsModalProps> = ({
             <div className="cookie-category-info">
               <h3 className="cookie-category-name">Analytics</h3>
             </div>
-            <button
-              className="cookie-category-toggle"
-              role="switch"
-              aria-checked={preferences.analytics}
+            <Toggle
+              checked={preferences.analytics}
+              onChange={(checked) => handleToggle("analytics")}
               aria-label="Toggle analytics cookies"
-              onClick={() => handleToggle("analytics")}
-            >
-              <div
-                className={`toggle-track${preferences.analytics ? " toggle-on" : ""}`}
-              >
-                <div className="toggle-thumb" />
-              </div>
-            </button>
+            />
           </div>
           <p className="cookie-category-description">
             Help us understand how visitors use the site so we can improve it.
@@ -125,9 +119,14 @@ const CookieSettingsModal: React.FC<CookieSettingsModalProps> = ({
       </div>
 
       <div className="cookie-settings-actions">
-        <button onClick={handleSave} className="cookie-save-btn">
+        <Button
+          variant="primary"
+          size="lg"
+          block
+          onClick={handleSave}
+        >
           Save preferences
-        </button>
+        </Button>
       </div>
     </BottomSheet>
   );

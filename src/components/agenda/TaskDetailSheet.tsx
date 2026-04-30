@@ -8,6 +8,7 @@ import { useNotionToken } from "@/hooks/useNotionToken";
 import { useAgenda } from "@/hooks/AgendaContext";
 import type { AgendaTask } from "./agenda-types";
 import { X, ExternalLink, Trash2, Calendar, Clock, AlertCircle, Tag, Repeat } from "lucide-react";
+import { Button } from "@/components/ui";
 import "./TaskDetailSheet.css";
 
 interface TaskDetailSheetProps {
@@ -154,15 +155,28 @@ export default function TaskDetailSheet({ task, onClose }: TaskDetailSheetProps)
           </div>
         </div>
         <div className="task-detail__actions">
-          <button className="task-detail__action-btn task-detail__action-btn--notion" onClick={handleOpenInNotion}>
-            <ExternalLink size={14} /> Open in Notion
-          </button>
-          <button className="task-detail__action-btn task-detail__action-btn--delete" onClick={handleDelete}>
-            <Trash2 size={14} /> Delete
-          </button>
-          <button className="task-detail__action-btn task-detail__action-btn--save" onClick={handleSave} disabled={isSaving}>
+          <Button
+            variant="notion"
+            icon={<ExternalLink size={14} />}
+            onClick={handleOpenInNotion}
+          >
+            Open in Notion
+          </Button>
+          <Button
+            variant="danger-outlined"
+            icon={<Trash2 size={14} />}
+            onClick={handleDelete}
+          >
+            Delete
+          </Button>
+          <Button
+            variant="primary"
+            align="right"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
             {isSaving ? "Saving..." : "Save"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

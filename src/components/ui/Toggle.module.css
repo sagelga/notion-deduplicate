@@ -5,6 +5,11 @@
    Accessible: uses a hidden native checkbox for a11y with
    visual styling applied to the label.
 
+   Sizes:
+     sm  — 40×22px, thumb 18px, translateX 18px
+     md  — 44×24px, thumb 20px, translateX 20px (default)
+     lg  — 48×26px, thumb 22px, translateX 22px
+
    Uses --color-* tokens for full light/dark support.
    ────────────────────────────────────────────────────────────── */
 
@@ -28,7 +33,7 @@
   border: 0;
 }
 
-/* ── Track ── */
+/* ── Track — default (md) ── */
 .toggle-track {
   position: relative;
   width: 44px;
@@ -44,13 +49,7 @@
   background: var(--color-accent);
 }
 
-/* Disabled state */
-.toggle-wrapper--disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-/* ── Thumb ── */
+/* ── Thumb — default (md) ── */
 .toggle-thumb {
   position: absolute;
   top: 2px;
@@ -66,6 +65,48 @@
 /* On state — thumb slides right */
 .toggle-track--on .toggle-thumb {
   transform: translateX(20px);
+}
+
+/* ── Size: sm (40×22, thumb 18, translateX 18) ── */
+.toggle-wrapper--sm {
+  /* wrapper doesn't need changes */
+}
+
+.toggle-track--sm {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+}
+
+.toggle-thumb--sm {
+  width: 18px;
+  height: 18px;
+}
+
+.toggle-track--sm.toggle-track--on .toggle-thumb--sm {
+  transform: translateX(18px);
+}
+
+/* ── Size: lg (48×26, thumb 22, translateX 22) ── */
+.toggle-track--lg {
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
+}
+
+.toggle-thumb--lg {
+  width: 22px;
+  height: 22px;
+}
+
+.toggle-track--lg.toggle-track--on .toggle-thumb--lg {
+  transform: translateX(22px);
+}
+
+/* ── Disabled state ── */
+.toggle-wrapper--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* ── Label text ── */

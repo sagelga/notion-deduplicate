@@ -10,7 +10,7 @@
 
 // ── Buttons ──────────────────────────────────────────────────────
 export { default as Button } from "./Button";
-export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button";
+export type { ButtonProps, ButtonVariant, ButtonSize, ButtonAlign } from "./Button";
 
 // ── Badges ───────────────────────────────────────────────────────
 export { default as Badge } from "./Badge";
@@ -34,7 +34,7 @@ export type { InputProps, InputVariant } from "./Input";
 
 // ── Toggles ──────────────────────────────────────────────────────
 export { default as Toggle } from "./Toggle";
-export type { ToggleProps } from "./Toggle";
+export type { ToggleProps, ToggleSize } from "./Toggle";
 
 // ── Cards ────────────────────────────────────────────────────────
 export { default as Card, CardHeader, CardTitle, CardBody, CardFooter } from "./Card";
@@ -43,6 +43,10 @@ export type { CardProps, CardVariant, CardHeaderProps, CardTitleProps, CardBodyP
 // ── Progress bars ────────────────────────────────────────────────
 export { default as ProgressBar } from "./ProgressBar";
 export type { ProgressBarProps, ProgressVariant, ProgressSize, ProgressState } from "./ProgressBar";
+
+// ── Sync button ────────────────────────────────────────────────
+export { default as SyncButton } from "./SyncButton";
+export type { SyncButtonProps } from "./SyncButton";
 
 // Re-export BottomSheet and Notification which existed before
 export { default as BottomSheet } from "./BottomSheet";

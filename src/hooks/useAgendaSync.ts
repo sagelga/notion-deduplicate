@@ -1,23 +1,89 @@
 // useAgendaSync.ts
 //
 // Hook for syncing tasks from a Notion database into the Agenda state.
+// Uses progressive fetching: each view has its own date window, and tasks
+// are merged into a shared cache keyed by databaseId. Switching views only
+// fetches newly needed ranges — already-fetched windows are served from cache.
 
 "use client";
 
 import { useCallback, useRef } from "react";
 import { useNotionToken } from "./useNotionToken";
 import { useAgenda } from "./AgendaContext";
-import { paginateDatabase, getDatabaseSchema } from "@/lib/notion";
+import { paginateDatabase, getDatabaseSchema, NotionFilter, NotionSort } from "@/lib/notion";
 import type { RawNotionPage, NotionProperty } from "@/lib/notion";
 import type { AgendaTask } from "@/components/agenda/agenda-types";
+import type { AgendaView } from "@/components/agenda/agenda-types";
+import { NotionCache } from "@/lib/cache";
 
-interface PropertyMapping {
+const LS_WINDOW_DAYS = "agenda:windowDays";
+const DEFAULT_WINDOW_DAYS = 14;
+
+export interface PropertyMapping {
   title: string;
   done: string | null;
   dueDate: string | null;
   priority: string | null;
   labels: string | null;
   recurring: string | null;
+}
+
+const LS_PROP_MAP = "agenda:propertyMapping";
+
+function loadSavedPropertyMapping(): PropertyMapping | null {
+  try {
+    const raw = localStorage.getItem(LS_PROP_MAP);
+    if (raw) return JSON.parse(raw) as PropertyMapping;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function loadWindowDays(): number {
+  try {
+    const raw = localStorage.getItem(LS_WINDOW_DAYS);
+    if (raw) return parseInt(raw, 10);
+  } catch { /* ignore */ }
+  return DEFAULT_WINDOW_DAYS;
+}
+
+const VIEW_WINDOWS: Record<AgendaView, number> = {
+  today: 3,
+  upcoming: 7,
+  calendar: 45,
+  inbox: 0,
+};
+
+function buildDateFilter(propertyName: string, before: string, after: string): NotionFilter {
+  return {
+    property: propertyName,
+    date: {
+      before,
+      after,
+    },
+  };
+}
+
+function buildDateSort(propertyName: string): NotionSort {
+  return { property: propertyName, direction: "ascending" };
+}
+
+function buildInboxFilter(propertyName: string): NotionFilter {
+  return {
+    property: propertyName,
+    date: {
+      is_empty: true,
+    },
+  };
+}
+
+function dateRange(windowDays: number): { start: string; end: string } {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(startDate.getDate() - windowDays);
+  const endDate = new Date(now);
+  endDate.setDate(endDate.getDate() + windowDays);
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  return { start: fmt(startDate), end: fmt(endDate) };
 }
 
 function detectPropertyMapping(schema: NotionProperty[]): PropertyMapping {
@@ -122,10 +188,52 @@ function normalizeTask(page: RawNotionPage, mapping: PropertyMapping): AgendaTas
   };
 }
 
+const LS_TASKS_CACHE = "agenda:tasksCache";
+const LS_INBOX_CACHE = "agenda:inboxCache";
+
+function loadTasksCache(): Map<string, AgendaTask> {
+  try {
+    const raw = localStorage.getItem(LS_TASKS_CACHE);
+    if (!raw) return new Map();
+    const arr = JSON.parse(raw) as AgendaTask[];
+    return new Map(arr.map((t) => [t.id, t]));
+  } catch {
+    return new Map();
+  }
+}
+
+function saveTasksCache(cache: Map<string, AgendaTask>): void {
+  try {
+    localStorage.setItem(LS_TASKS_CACHE, JSON.stringify(Array.from(cache.values())));
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadInboxCache(): Map<string, AgendaTask> {
+  try {
+    const raw = localStorage.getItem(LS_INBOX_CACHE);
+    if (!raw) return new Map();
+    const arr = JSON.parse(raw) as AgendaTask[];
+    return new Map(arr.map((t) => [t.id, t]));
+  } catch {
+    return new Map();
+  }
+}
+
+function saveInboxCache(cache: Map<string, AgendaTask>): void {
+  try {
+    localStorage.setItem(LS_INBOX_CACHE, JSON.stringify(Array.from(cache.values())));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function useAgendaSync() {
   const { token } = useNotionToken();
   const {
     selectedDatabaseId,
+    tasks,
     setTasks,
     setIsLoading,
     setError,
@@ -134,73 +242,185 @@ export function useAgendaSync() {
   } = useAgenda();
 
   const abortRef = useRef(false);
+  const tasksCacheRef = useRef<Map<string, AgendaTask>>(new Map());
+  const inboxCacheRef = useRef<Map<string, AgendaTask>>(new Map());
+  const fetchedRangeRef = useRef<{ start: string; end: string } | null>(null);
+  const windowDaysRef = useRef(loadWindowDays());
 
-  const sync = useCallback(async () => {
-    if (!selectedDatabaseId) {
-      setError("No database selected");
-      return;
-    }
+  const loadCaches = useCallback(() => {
+    tasksCacheRef.current = loadTasksCache();
+    inboxCacheRef.current = loadInboxCache();
+  }, []);
 
-    if (!token) {
-      setError("No Notion token found. Please connect your Notion account.");
-      addNotification({
-        variant: "error",
-        title: "Not connected",
-        message: "Please connect your Notion account to sync tasks.",
-        autoDismissMs: 5000,
-      });
-      return;
-    }
+  const mergeTasks = useCallback(
+    (newTasks: AgendaTask[], isInbox = false) => {
+      const targetCache = isInbox ? inboxCacheRef.current : tasksCacheRef.current;
+      for (const t of newTasks) {
+        targetCache.set(t.id, t);
+      }
+      if (isInbox) {
+        saveInboxCache(inboxCacheRef.current);
+      } else {
+        saveTasksCache(tasksCacheRef.current);
+      }
+      const merged = isInbox
+        ? Array.from(inboxCacheRef.current.values())
+        : Array.from(tasksCacheRef.current.values());
+      setTasks(merged);
+    },
+    [setTasks]
+  );
 
-    abortRef.current = false;
-    setIsLoading(true);
-    setError(null);
+  const sync = useCallback(
+    async (view?: AgendaView, forceRefresh = false) => {
+      const currentView = view ?? "today";
 
-    try {
-      const schema = await getDatabaseSchema(selectedDatabaseId, token);
-      const mapping = detectPropertyMapping(schema);
-      const allTasks: AgendaTask[] = [];
-
-      for await (const batch of paginateDatabase(selectedDatabaseId, token)) {
-        if (abortRef.current) break;
-        for (const page of batch) {
-          allTasks.push(normalizeTask(page, mapping));
-        }
+      if (!selectedDatabaseId) {
+        setError("No database selected");
+        return;
       }
 
-      if (!abortRef.current) {
-        setTasks(allTasks);
-        setLastSyncedAt(new Date().toISOString());
-        addNotification({
-          variant: "success",
-          title: "Synced",
-          message: `${allTasks.length} tasks loaded.`,
-          autoDismissMs: 3000,
-        });
-      }
-    } catch (err) {
-      if (!abortRef.current) {
-        const message = err instanceof Error ? err.message : "Failed to sync tasks";
-        setError(message);
+      if (!token) {
+        setError("No Notion token found. Please connect your Notion account.");
         addNotification({
           variant: "error",
-          title: "Sync failed",
-          message,
-          autoDismissMs: 8000,
+          title: "Not connected",
+          message: "Please connect your Notion account to sync tasks.",
+          autoDismissMs: 5000,
         });
+        return;
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    selectedDatabaseId,
-    token,
-    setTasks,
-    setIsLoading,
-    setError,
-    setLastSyncedAt,
-    addNotification,
-  ]);
+
+      loadCaches();
+      abortRef.current = false;
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const schema = await getDatabaseSchema(selectedDatabaseId, token);
+        const savedMapping = loadSavedPropertyMapping();
+        const mapping = savedMapping ?? detectPropertyMapping(schema);
+        const windowDays = windowDaysRef.current;
+
+        if (currentView === "inbox") {
+          if (!forceRefresh && inboxCacheRef.current.size > 0) {
+            setTasks(Array.from(inboxCacheRef.current.values()));
+            setLastSyncedAt(new Date().toISOString());
+            setIsLoading(false);
+            addNotification({
+              variant: "success",
+              title: "Loaded inbox from cache",
+              message: `${inboxCacheRef.current.size} tasks.`,
+              autoDismissMs: 2000,
+            });
+            return;
+          }
+
+          abortRef.current = false;
+          const allTasks: AgendaTask[] = [];
+
+          const filterOptions = mapping.dueDate
+            ? { filter: buildInboxFilter(mapping.dueDate) }
+            : undefined;
+
+          for await (const batch of paginateDatabase(selectedDatabaseId, token, filterOptions)) {
+            if (abortRef.current) break;
+            for (const page of batch) {
+              allTasks.push(normalizeTask(page, mapping));
+            }
+          }
+
+          if (!abortRef.current) {
+            mergeTasks(allTasks, true);
+            setLastSyncedAt(new Date().toISOString());
+            addNotification({
+              variant: "success",
+              title: "Inbox synced",
+              message: `${allTasks.length} tasks.`,
+              autoDismissMs: 3000,
+            });
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        const viewWindow = VIEW_WINDOWS[currentView] ?? windowDays;
+        const { start, end } = dateRange(viewWindow);
+
+        const alreadyFetched =
+          !forceRefresh &&
+          fetchedRangeRef.current !== null &&
+          fetchedRangeRef.current.start <= start &&
+          fetchedRangeRef.current.end >= end &&
+          tasksCacheRef.current.size > 0;
+
+        if (alreadyFetched) {
+          setTasks(Array.from(tasksCacheRef.current.values()));
+          setLastSyncedAt(new Date().toISOString());
+          setIsLoading(false);
+          addNotification({
+            variant: "success",
+            title: "Loaded from cache",
+            message: `${tasksCacheRef.current.size} tasks.`,
+            autoDismissMs: 2000,
+          });
+          return;
+        }
+
+        const filterOptions =
+          mapping.dueDate
+            ? {
+                filter: buildDateFilter(mapping.dueDate, end, start),
+                sorts: [buildDateSort(mapping.dueDate)],
+              }
+            : undefined;
+
+        const allTasks: AgendaTask[] = [];
+        for await (const batch of paginateDatabase(selectedDatabaseId, token, filterOptions)) {
+          if (abortRef.current) break;
+          for (const page of batch) {
+            allTasks.push(normalizeTask(page, mapping));
+          }
+        }
+
+        if (!abortRef.current) {
+          mergeTasks(allTasks, false);
+          fetchedRangeRef.current = { start, end };
+          setLastSyncedAt(new Date().toISOString());
+          addNotification({
+            variant: "success",
+            title: "Synced",
+            message: `${allTasks.length} tasks loaded.`,
+            autoDismissMs: 3000,
+          });
+        }
+      } catch (err) {
+        if (!abortRef.current) {
+          const message = err instanceof Error ? err.message : "Failed to sync tasks";
+          setError(message);
+          addNotification({
+            variant: "error",
+            title: "Sync failed",
+            message,
+            autoDismissMs: 8000,
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      selectedDatabaseId,
+      token,
+      setTasks,
+      setIsLoading,
+      setError,
+      setLastSyncedAt,
+      addNotification,
+      loadCaches,
+      mergeTasks,
+    ]
+  );
 
   const cancel = useCallback(() => {
     abortRef.current = true;

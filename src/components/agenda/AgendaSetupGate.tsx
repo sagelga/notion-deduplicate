@@ -72,12 +72,12 @@ export default function AgendaSetupGate({ children }: AgendaSetupGateProps) {
           <p className="agenda-setup__desc">
             Agenda needs your Notion integration token to read and manage your tasks.
           </p>
-          <a href="/duplicate" className="agenda-setup__cta">
+          <a href="/settings" className="agenda-setup__cta">
             <ExternalLink size={16} />
-            Go to setup page
+            Go to Settings
           </a>
           <p className="agenda-setup__hint">
-            Paste your token on the Duplicate page, then come back here.
+            Add your Notion integration token in the Connection section.
           </p>
         </div>
       </div>

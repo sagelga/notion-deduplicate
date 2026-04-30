@@ -1,0 +1,56 @@
+/* ──────────────────────────────────────────────────────────────
+   SyncButton.module.css — sync button with animated icon
+
+   Used in sidebar footers for synchronization actions.
+   Has slightly different sizing than standard button:
+   - Padding: 8px 16px (vs 5px 10px)
+   - Border-radius: 8px (vs 4px)
+   - Gap: 8px (vs 6px)
+
+   Uses --color-* tokens for full light/dark support.
+   ────────────────────────────────────────────────────────────── */
+
+.sync-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-rim);
+  border-radius: 8px;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.sync-btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  background: var(--color-surface);
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Icon ── */
+.sync-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sync-icon--spinning {
+  animation: sync-spin 1s linear infinite;
+}
+
+@keyframes sync-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

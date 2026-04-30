@@ -4,26 +4,54 @@
 // The sidebar shows section tabs; clicking one scrolls the content area to
 // the corresponding section. An IntersectionObserver scrollspy highlights
 // the active sidebar item as the user scrolls.
+//
+// NOTE: AgendaSettings is dynamically imported with ssr:false because it
+// uses useAgenda() which requires the AgendaProvider context — unavailable
+// during static pre-rendering.
 
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useNotionToken } from "@/hooks/useNotionToken";
 import ConnectionSettings from "@/components/settings/ConnectionSettings";
 import AppearanceSettings from "@/components/settings/AppearanceSettings";
 import LanguageSettings from "@/components/settings/LanguageSettings";
 import PrivacySettings from "@/components/settings/PrivacySettings";
 import "./settings.css";
 
+// AgendaSettings uses useAgenda() which requires AgendaProvider — load client-side only
+const AgendaSettings = dynamic(
+  () => import("@/components/settings/AgendaSettings"),
+  { ssr: false }
+);
+
 const SECTIONS = [
   { id: "connection", label: "Connection" },
   { id: "appearance", label: "Appearance" },
+  { id: "agenda", label: "Agenda" },
   { id: "language", label: "Language" },
   { id: "privacy", label: "Privacy" },
 ] as const;
 
 export default function SettingsPage() {
+  const { token, setToken } = useNotionToken();
   const [activeSection, setActiveSection] = useState<string>("connection");
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  // Pick up OAuth token from short-lived cookie (set by /api/auth/callback),
+  // move it to localStorage, then expire the cookie.
+  useEffect(() => {
+    if (token) return;
+    const cookieToken = document.cookie
+      .split("; ")
+      .find((r) => r.startsWith("notion_token="))
+      ?.split("=")[1];
+    if (cookieToken) {
+      setToken(decodeURIComponent(cookieToken));
+      document.cookie = "notion_token=; maxAge=0; path=/";
+    }
+  }, [token, setToken]);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -124,6 +152,24 @@ export default function SettingsPage() {
               </p>
             </div>
             <AppearanceSettings />
+          </section>
+
+          <section
+            id="agenda"
+            ref={(el) => {
+              sectionRefs.current["agenda"] = el;
+            }}
+            className="settings-section"
+          >
+            <div className="settings-section-header">
+              <h2 className="settings-section-title">Agenda</h2>
+              <p className="settings-section-desc">
+                Configure how your tasks are organized, including which Notion
+                properties map to each Agenda field, your default view, and
+                quick-add preferences.
+              </p>
+            </div>
+            <AgendaSettings />
           </section>
 
           <section

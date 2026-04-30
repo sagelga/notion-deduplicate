@@ -1,0 +1,238 @@
+/* AgendaSettings.css */
+
+.agenda-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+/* Full-width option row (matches AppearanceSettings pattern) */
+.agenda-option {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-left: 3px solid transparent;
+  border-radius: var(--nd-radius-md);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  text-align: left;
+}
+
+.agenda-option:hover {
+  background: var(--nd-bg-hover);
+}
+
+.agenda-option.active {
+  border-left-color: var(--nd-accent);
+  background: var(--nd-accent-bg);
+}
+
+.agenda-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--nd-chip-bg);
+  border-radius: var(--nd-radius-md);
+  color: var(--nd-text-dim);
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.agenda-option.active .agenda-option-icon {
+  background: var(--nd-accent);
+  color: #ffffff;
+}
+
+.agenda-option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.agenda-option-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--nd-text);
+}
+
+.agenda-option-description {
+  font-size: 0.8125rem;
+  color: var(--nd-text-dim);
+}
+
+.agenda-option-radio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--nd-divider-strong);
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease;
+}
+
+.agenda-option.active .agenda-option-radio {
+  border-color: var(--nd-accent);
+}
+
+.agenda-option-radio-dot {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+
+.agenda-option.active .agenda-option-radio-dot {
+  background: var(--nd-accent);
+}
+
+/* ── Property mapping rows ── */
+.agenda-prop-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--nd-divider);
+}
+
+.agenda-prop-row:last-child {
+  border-bottom: none;
+}
+
+.agenda-prop-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--nd-text);
+}
+
+.agenda-prop-required {
+  color: var(--nd-accent);
+  margin-left: 2px;
+}
+
+.agenda-prop-select {
+  width: 100%;
+  padding: 0.4rem 0.625rem;
+  background: var(--nd-bg-elevated);
+  border: 1px solid var(--nd-divider-strong);
+  border-radius: var(--nd-radius);
+  color: var(--nd-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  padding-right: 1.75rem;
+  transition: border-color 0.15s ease;
+}
+
+.agenda-prop-select:focus {
+  outline: none;
+  border-color: var(--nd-accent);
+}
+
+/* ── Section header within agenda settings ── */
+.agenda-settings-subtitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--nd-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 1.25rem 0 0.375rem;
+}
+
+.agenda-settings-subtitle:first-child {
+  margin-top: 0;
+}
+
+/* ── View mode selector ── */
+.agenda-view-options {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.agenda-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: var(--nd-chip-bg);
+  border: 1px solid var(--nd-divider);
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--nd-text-dim);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.agenda-view-btn:hover {
+  background: var(--nd-bg-hover);
+  color: var(--nd-text);
+}
+
+.agenda-view-btn.active {
+  background: var(--nd-accent-bg);
+  border-color: var(--nd-accent);
+  color: var(--nd-accent);
+}
+
+/* ── Priority default ── */
+.agenda-priority-btns {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.agenda-priority-btn {
+  padding: 0.3rem 0.75rem;
+  background: var(--nd-chip-bg);
+  border: 1px solid var(--nd-divider);
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--nd-text-dim);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.agenda-priority-btn:hover {
+  background: var(--nd-bg-hover);
+  color: var(--nd-text);
+}
+
+.agenda-priority-btn.active {
+  border-color: var(--nd-accent);
+  color: var(--nd-accent);
+}
+
+/* ── Database selector (within agenda settings) ── */
+.agenda-db-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.agenda-db-selector-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--nd-text);
+}
+
+.agenda-db-selector-desc {
+  font-size: 0.8125rem;
+  color: var(--nd-text-dim);
+  line-height: 1.5;
+  margin: 0;
+}

@@ -1,18 +1,9 @@
 /* ──────────────────────────────────────────────────────────────
    CookieSettingsModal.css — granular cookie settings
-   (components/cookies/CookieSettingsModal.tsx)
-   Purpose: Body content for the detailed cookie settings sheet,
-   showing each cookie category as a card with a toggle switch.
+   Body content for the detailed cookie settings sheet.
 
-   Conventions:
-   - The toggle is a custom CSS implementation (track + thumb) rather
-     than a native checkbox, ensuring consistent cross-browser styling.
-   - Toggle dimensions differ between the standard and 480px breakpoint;
-     the translateX offset for the "on" state must match the size change
-     exactly (20px → 18px) to keep the thumb flush with the track edge.
-   - .cookie-category-badge reuses --color-accent for "Required"
-     labelling because there is no separate warning/info token.
-   - Colours come from globals.css design tokens.
+   Note: toggle-track, toggle-thumb, and cookie-save-btn styles have
+   been removed as the component now uses ui/Toggle and ui/Button.
    ────────────────────────────────────────────────────────────── */
 
 .cookie-settings-list {
@@ -69,54 +60,7 @@
   line-height: 1.55;
 }
 
-/* Toggle — fully custom track + thumb implementation.
-   The thumb slides 20px to the right when .toggle-on is applied,
-   which matches (track width 44 - thumb width 20 - 2*offset 4 = 18,
-   rounded to 20px for visual breathing room). */
-.cookie-category-toggle {
-  flex-shrink: 0;
-  padding: 0;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.cookie-category-toggle.disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.toggle-track {
-  position: relative;
-  width: 44px;
-  height: 24px;
-  background: var(--color-rim);
-  border-radius: 12px;
-  transition: background-color 0.2s ease;
-}
-
-.toggle-track.toggle-on {
-  background: var(--color-accent);
-}
-
-.toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  background: var(--color-canvas);
-  border-radius: 50%;
-  transition: transform 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-}
-
-.toggle-track.toggle-on .toggle-thumb {
-  transform: translateX(20px);
-}
-
-/* Footer + actions — visually separated from the category list
-   by a border-top; provides a "Learn more" link and the save button. */
+/* Footer */
 .cookie-settings-footer {
   padding: 0.875rem 0.25rem;
   border-top: 1px solid var(--color-rim);
@@ -139,51 +83,17 @@
   color: var(--color-accent-hover);
 }
 
+/* Actions — uses ui/Button with block prop */
 .cookie-settings-actions {
   padding: 0.25rem;
   padding-bottom: 0.5rem;
 }
 
-.cookie-save-btn {
-  width: 100%;
-  padding: 0.875rem 1.5rem;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: opacity 0.15s ease, transform 0.1s ease;
-}
-
-.cookie-save-btn:hover {
-  opacity: 0.9;
-}
-
-.cookie-save-btn:active {
-  transform: scale(0.98);
-}
-
-/* On small phones, reduce toggle dimensions by 4px. The translateX
-   value is updated from 20px → 18px to match the smaller thumb width
-   so the thumb stays flush against the right edge of the track. */
 @media (max-width: 480px) {
   .cookie-category {
     padding: 0.875rem;
   }
   .cookie-category-name {
     font-size: 0.875rem;
-  }
-  .toggle-track {
-    width: 40px;
-    height: 22px;
-  }
-  .toggle-thumb {
-    width: 18px;
-    height: 18px;
-  }
-  .toggle-track.toggle-on .toggle-thumb {
-    transform: translateX(18px);
   }
 }

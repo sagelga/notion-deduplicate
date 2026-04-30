@@ -12,7 +12,7 @@ import "./QuickAddBar.css";
 
 export default function QuickAddBar() {
   const { token } = useNotionToken();
-  const { selectedDatabaseId, addNotification, setTasks } = useAgenda();
+  const { selectedDatabaseId, addNotification, setTasks, quickAddDefaultPriority, quickAddDefaultLabels } = useAgenda();
   const [input, setInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [preview, setPreview] = useState<ReturnType<typeof parseQuickAdd> | null>(null);
@@ -46,10 +46,19 @@ export default function QuickAddBar() {
         properties["Priority"] = {
           select: { name: parsed.priority.charAt(0).toUpperCase() + parsed.priority.slice(1) },
         };
+      } else if (quickAddDefaultPriority) {
+        properties["Priority"] = {
+          select: { name: quickAddDefaultPriority.charAt(0).toUpperCase() + quickAddDefaultPriority.slice(1) },
+        };
       }
 
       if (parsed.labels.length > 0) {
         properties["Labels"] = { multi_select: parsed.labels.map((l) => ({ name: l })) };
+      } else if (quickAddDefaultLabels) {
+        const defaultLabels = quickAddDefaultLabels.split(",").map((l) => l.trim()).filter(Boolean);
+        if (defaultLabels.length > 0) {
+          properties["Labels"] = { multi_select: defaultLabels.map((l) => ({ name: l })) };
+        }
       }
 
       if (parsed.recurring) {
@@ -98,7 +107,7 @@ export default function QuickAddBar() {
     } finally {
       setIsCreating(false);
     }
-  }, [input, token, selectedDatabaseId, addNotification, setTasks]);
+  }, [input, token, selectedDatabaseId, addNotification, setTasks, quickAddDefaultPriority, quickAddDefaultLabels]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

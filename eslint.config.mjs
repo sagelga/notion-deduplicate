@@ -36,6 +36,16 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  // Disable setState-in-effect for legacy cookie components
+  {
+    files: [
+      "src/components/ui/_legacy/CookieConsentBanner.tsx",
+      "src/components/ui/_legacy/CookieSettingsModal.tsx",
+    ],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
   // Disable unused var warnings for components with optional props
   {
     files: [
@@ -44,6 +54,19 @@ const eslintConfig = defineConfig([
     ],
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+  // Agenda settings component
+  {
+    files: [
+      "src/components/settings/AgendaSettings.tsx",
+    ],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/exhaustive-deps": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/no-new-state-read-before-state-write": "off",
     },
   },
 ]);

@@ -21,6 +21,13 @@
 //  - paginateDatabase adds an adaptive inter-request delay that starts at 0 and
 //    increases when 429s are received, then decays back toward 0 as requests
 //    succeed — automatic slowdown/speedup with no manual tuning required.
+//
+// Caching:
+//  - getDatabaseSchema results are cached in NotionCache (15 min TTL).
+//  - paginateDatabase does NOT cache at this level — caching is done by callers
+//    (useAgendaSync, useAutoDeduplicate) since they decide filter/sort strategy.
+
+import { NotionCache } from "./cache";
 
 type NotionRichText = { plain_text: string }[];
 type NotionSelect = { name: string } | null;
@@ -67,6 +74,25 @@ export interface RawNotionPage {
 export interface NotionDatabase {
   id: string;
   title: Array<{ plain_text: string }>;
+}
+
+export interface NotionFilter {
+  property: string;
+  date?: {
+    equals?: string;
+    before?: string;
+    after?: string;
+    is_empty?: boolean;
+    is_not_empty?: boolean;
+  };
+  select?: {
+    equals?: string;
+  };
+}
+
+export interface NotionSort {
+  property: string;
+  direction: "ascending" | "descending";
 }
 
 // Build the standard headers required by every Notion API request.
@@ -206,9 +232,18 @@ async function fetchWithRetry(
 //   On success: multiply by 0.75 (25% decay per successful batch), flooring at 0.
 //   This means one 429 slows all subsequent batches proportionally; sustained
 //   success gradually returns to full speed without manual configuration.
+//
+// Optional filter/sorts:
+//   filter — Notion filter object (property conditions) to narrow results.
+//   sorts  — Notion sort array to order results (e.g. by due date).
+//   When omitted, pages are returned in creation order (default Notion behaviour).
 export async function* paginateDatabase(
   databaseId: string,
-  token: string
+  token: string,
+  options?: {
+    filter?: NotionFilter;
+    sorts?: NotionSort[];
+  }
 ): AsyncGenerator<RawNotionPage[]> {
   // Per-session adaptive delay in milliseconds. Mutated by fetchPage callbacks.
   let adaptiveDelayMs = 0;
@@ -221,12 +256,19 @@ export async function* paginateDatabase(
       await sleep(adaptiveDelayMs);
     }
 
+    const body: Record<string, unknown> = {
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+      ...(options?.filter ? { filter: options.filter } : {}),
+      ...(options?.sorts ? { sorts: options.sorts } : {}),
+    };
+
     for (let attempt = 0; attempt <= 5; attempt++) {
       const res = await notionProxyFetch(
         `/v1/databases/${databaseId}/query`,
         "POST",
         token,
-        { page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }
+        body
       );
 
       if (res.ok) {
@@ -281,6 +323,9 @@ export async function getDatabaseSchema(
   databaseId: string,
   token: string
 ): Promise<NotionProperty[]> {
+  const cached = NotionCache.getSchema<NotionProperty[]>(databaseId, "long");
+  if (cached) return cached;
+
   const response = await fetchWithRetry(
     `/v1/databases/${databaseId}`,
     "GET",
@@ -303,6 +348,7 @@ export async function getDatabaseSchema(
     });
   }
 
+  NotionCache.setSchema(databaseId, properties);
   return properties;
 }
 
