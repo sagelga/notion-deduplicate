@@ -26,13 +26,9 @@ interface NavItem {
 }
 
 interface NavbarProps {
-  /** Brand/logo text shown in top-left */
   brandName: string;
-  /** Where the brand logo links to (default: "/") */
   brandHref?: string;
-  /** Navigation items */
   links?: NavItem[];
-  /** Optional slot for extra controls in the top-right (e.g. search, user avatar) */
   controls?: React.ReactNode;
 }
 

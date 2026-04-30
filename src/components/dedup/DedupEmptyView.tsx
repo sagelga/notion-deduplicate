@@ -4,7 +4,7 @@
 "use client";
 
 import type { Stats } from "./dedup-types";
-import { Button } from "./ui";
+import { Button } from "@/components/ui";
 import "./DedupEmptyView.css";
 
 interface DedupEmptyViewProps {

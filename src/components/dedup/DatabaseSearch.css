@@ -1,0 +1,69 @@
+/* DatabaseSearch.css */
+
+.db-search-wrapper {
+  padding: 8px;
+  border-bottom: 1px solid var(--nd-divider);
+}
+
+.db-search-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius);
+  background: var(--nd-bg-soft);
+  color: var(--nd-text);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.db-search-input:focus {
+  border-color: var(--nd-accent);
+}
+
+/* DatabaseList.css */
+
+.db-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.db-list-items {
+  padding: 4px 0;
+}
+
+.db-list-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--nd-text);
+  transition: background 0.1s;
+}
+
+.db-list-item:hover {
+  background: var(--nd-bg-soft);
+}
+
+.db-list-item--selected {
+  background: color-mix(in srgb, var(--nd-accent) 12%, transparent);
+  color: var(--nd-accent);
+}
+
+.db-list-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-list-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: var(--nd-text-dim);
+  font-size: 13px;
+}

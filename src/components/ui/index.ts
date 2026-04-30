@@ -48,6 +48,10 @@ export type { ProgressBarProps, ProgressVariant, ProgressSize, ProgressState } f
 export { default as SyncButton } from "./SyncButton";
 export type { SyncButtonProps } from "./SyncButton";
 
+// ── Carousel ──────────────────────────────────────────────────────
+export { default as Carousel } from "./Carousel";
+export type { CarouselStep } from "./Carousel";
+
 // Re-export BottomSheet and Notification which existed before
 export { default as BottomSheet } from "./BottomSheet";
 // BottomSheetProps is defined inline in BottomSheet.tsx - re-export here

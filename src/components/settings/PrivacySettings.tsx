@@ -7,10 +7,8 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  getCookiePreferences,
-  setCookiePreferences,
-} from "@/utils/cookies";
+import { getCookiePreferences, setCookiePreferences } from "@/utils/cookies";
+import Toggle from "@/components/ui/Toggle";
 import "./PrivacySettings.css";
 
 export default function PrivacySettings() {
@@ -21,15 +19,6 @@ export default function PrivacySettings() {
     getCookiePreferences().analytics
   );
 
-  function save() {
-    setCookiePreferences({
-      functional: true,
-      analytics: analyticsEnabled,
-      consentGiven: true,
-      consentTimestamp: Date.now(),
-    });
-  }
-
   return (
     <div className="privacy-settings">
       <div className="privacy-category">
@@ -38,12 +27,12 @@ export default function PrivacySettings() {
             <span className="privacy-category-name">Necessary</span>
             <span className="privacy-category-badge">Always active</span>
           </div>
-          <div
-            className="privacy-toggle privacy-toggle--on privacy-toggle--disabled"
-            aria-hidden="true"
-          >
-            <div className="privacy-toggle-thumb" />
-          </div>
+          <Toggle
+              checked={true}
+              onChange={() => {}}
+              disabled
+              aria-label="Necessary cookies (always active)"
+            />
         </div>
         <p className="privacy-category-desc">
           Required for the site to function. Includes your cookie consent
@@ -56,18 +45,19 @@ export default function PrivacySettings() {
           <div className="privacy-category-info">
             <span className="privacy-category-name">Analytics</span>
           </div>
-          <button
-            className={`privacy-toggle${analyticsEnabled ? " privacy-toggle--on" : ""}`}
-            role="switch"
-            aria-checked={analyticsEnabled}
-            aria-label="Toggle analytics cookies"
-            onClick={() => {
-              setAnalyticsEnabled((v) => !v);
-              save();
-            }}
-          >
-            <div className="privacy-toggle-thumb" />
-          </button>
+          <Toggle
+              checked={analyticsEnabled}
+              onChange={(checked) => {
+                setAnalyticsEnabled(checked);
+                setCookiePreferences({
+                  functional: true,
+                  analytics: checked,
+                  consentGiven: true,
+                  consentTimestamp: Date.now(),
+                });
+              }}
+              aria-label="Toggle analytics cookies"
+            />
         </div>
         <p className="privacy-category-desc">
           Helps us understand which pages are visited and how users navigate

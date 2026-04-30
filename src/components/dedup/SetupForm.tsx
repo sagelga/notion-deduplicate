@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useNotionToken } from "@/hooks/useNotionToken";
-import { Input } from "./ui";
+import { Input } from "@/components/ui";
 import "./SetupForm.css";
 
 export default function SetupForm() {

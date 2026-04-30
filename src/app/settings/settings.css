@@ -2,9 +2,9 @@
 
 /* ── Page shell ── */
 .settings-layout {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 0 1.5rem 4rem;
+  padding: 0 1.5rem 5rem;
 }
 
 /* ── Page header ── */
@@ -15,36 +15,24 @@
 }
 
 .settings-title {
-  margin: 0;
-  font-size: 2rem;
+  margin: 0 0 0.3rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--nd-text);
   letter-spacing: -0.025em;
-  position: relative;
-  display: inline-block;
 }
 
-/* Decorative gear watermark (CSS-only) */
-.settings-title::after {
-  content: "";
-  position: absolute;
-  right: -2.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 2rem;
-  height: 2rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23E5613A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' opacity='0.25'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  pointer-events: none;
+.settings-subtitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--nd-text-dim);
 }
 
 /* ── Two-column body ── */
 .settings-body {
   display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: 0 2.5rem;
+  grid-template-columns: 220px 1fr;
+  gap: 0 2rem;
   align-items: start;
   padding-top: 2rem;
 }
@@ -52,8 +40,17 @@
 /* ── Sidebar ── */
 .settings-sidebar {
   position: sticky;
-  top: 64px;
-  padding-top: 0.25rem;
+  top: 80px;
+}
+
+.settings-sidebar-inner {
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius-lg);
+  padding: 0.3125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
 }
 
 .settings-sidebar-list {
@@ -66,15 +63,16 @@
 }
 
 .settings-sidebar-item {
-  display: block;
-  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5625rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--nd-text-dim);
   text-decoration: none;
-  border-radius: var(--nd-radius);
-  border-left: 2px solid transparent;
-  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  border-radius: var(--nd-radius-md);
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .settings-sidebar-item:hover {
@@ -85,29 +83,73 @@
 
 .settings-sidebar-item.active {
   color: var(--nd-accent);
-  border-left-color: var(--nd-accent);
   background: var(--nd-accent-bg);
+}
+
+.settings-sidebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.settings-sidebar-item:hover .settings-sidebar-icon {
+  opacity: 0.85;
+}
+
+.settings-sidebar-item.active .settings-sidebar-icon {
+  opacity: 1;
 }
 
 /* ── Content area ── */
 .settings-content {
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 1.25rem;
 }
 
+/* ── Section card ── */
 .settings-section {
-  scroll-margin-top: 80px;
-  padding-top: 0.25rem;
+  scroll-margin-top: 88px;
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius-lg);
+  overflow: hidden;
 }
 
 .settings-section-header {
-  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1.125rem 1.375rem;
+  background: var(--nd-bg-soft);
+  border-bottom: 1px solid var(--nd-divider);
+}
+
+.settings-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--nd-accent-bg);
+  border-radius: var(--nd-radius-md);
+  color: var(--nd-accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.settings-section-meta {
+  flex: 1;
+  min-width: 0;
 }
 
 .settings-section-title {
-  margin: 0 0 0.375rem;
-  font-size: 1.125rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--nd-text);
   letter-spacing: -0.01em;
@@ -115,10 +157,14 @@
 
 .settings-section-desc {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   color: var(--nd-text-dim);
-  line-height: 1.6;
-  max-width: 56ch;
+  line-height: 1.55;
+}
+
+.settings-section-body {
+  padding: 1.25rem 1.375rem;
+  background: var(--nd-bg);
 }
 
 /* ── Mobile: single column ── */
@@ -128,16 +174,11 @@
   }
 
   .settings-header {
-    padding: 2rem 0 1.5rem;
+    padding: 1.75rem 0 1.5rem;
   }
 
   .settings-title {
-    font-size: 1.5rem;
-  }
-
-  /* Hide the decorative watermark on small screens */
-  .settings-title::after {
-    display: none;
+    font-size: 1.375rem;
   }
 
   .settings-body {
@@ -145,38 +186,40 @@
     gap: 0;
   }
 
-  /* Sidebar becomes horizontal chip row */
   .settings-sidebar {
     position: static;
+    margin-bottom: 1.5rem;
+  }
+
+  .settings-sidebar-inner {
+    flex-direction: row;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--nd-divider);
-    margin-bottom: 1.5rem;
+    padding: 0.25rem;
+    gap: 0.25rem;
   }
 
   .settings-sidebar-list {
     flex-direction: row;
-    gap: 0.375rem;
-    flex-wrap: nowrap;
+    gap: 0.25rem;
     min-width: max-content;
   }
 
   .settings-sidebar-item {
     white-space: nowrap;
-    border-left: none;
     border-radius: 20px;
     padding: 0.3rem 0.75rem;
-    background: var(--nd-chip-bg);
-  }
-
-  .settings-sidebar-item.active {
-    background: var(--nd-accent-bg);
-    color: var(--nd-accent);
-    border: 1px solid var(--nd-accent);
   }
 
   .settings-section {
     scroll-margin-top: 0;
+  }
+
+  .settings-section-header {
+    padding: 1rem;
+  }
+
+  .settings-section-body {
+    padding: 1rem;
   }
 }

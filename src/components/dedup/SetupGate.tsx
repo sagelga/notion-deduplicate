@@ -1,5 +1,6 @@
-// AgendaSetupGate.tsx
-// Gate: checks auth + DB selection before showing Agenda
+// SetupGate.tsx
+// Gate: checks auth + DB selection before showing children.
+// Used by both /duplicate and /agenda.
 
 "use client";
 
@@ -8,14 +9,18 @@ import { useNotionToken } from "@/hooks/useNotionToken";
 import { useAgenda } from "@/hooks/AgendaContext";
 import { listDatabases } from "@/lib/notion";
 import type { NotionDatabase } from "@/lib/notion";
-import { CheckSquare, ExternalLink, Loader2 } from "lucide-react";
-import "./AgendaSetupGate.css";
+import { CheckSquare, Loader2 } from "lucide-react";
+import DashboardHeader from "@/components/DashboardHeader";
+import MissingNotionToken from "@/components/settings/MissingNotionToken";
+import "./SetupGate.css";
 
-interface AgendaSetupGateProps {
-  children: React.ReactNode;
+interface SetupGateProps {
+  children?: React.ReactNode;
+  title?: string;
+  description?: string;
 }
 
-export default function AgendaSetupGate({ children }: AgendaSetupGateProps) {
+export default function SetupGate({ children, title, description }: SetupGateProps) {
   const { token } = useNotionToken();
   const { selectedDatabaseId, setSelectedDatabase } = useAgenda();
   const [databases, setDatabases] = useState<NotionDatabase[]>([]);
@@ -24,11 +29,7 @@ export default function AgendaSetupGate({ children }: AgendaSetupGateProps) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (token && selectedDatabaseId) {
-      setIsReady(true);
-    } else {
-      setIsReady(false);
-    }
+    setIsReady(!!(token && selectedDatabaseId));
   }, [token, selectedDatabaseId]);
 
   const fetchDatabases = useCallback(async () => {
@@ -64,61 +65,44 @@ export default function AgendaSetupGate({ children }: AgendaSetupGateProps) {
   }
 
   if (!token) {
-    return (
-      <div className="agenda-setup">
-        <div className="agenda-setup__card">
-          <CheckSquare size={40} className="agenda-setup__icon" />
-          <h2 className="agenda-setup__title">Connect Notion</h2>
-          <p className="agenda-setup__desc">
-            Agenda needs your Notion integration token to read and manage your tasks.
-          </p>
-          <a href="/settings" className="agenda-setup__cta">
-            <ExternalLink size={16} />
-            Go to Settings
-          </a>
-          <p className="agenda-setup__hint">
-            Add your Notion integration token in the Connection section.
-          </p>
-        </div>
-      </div>
-    );
+    return <MissingNotionToken />;
   }
 
   return (
-    <div className="agenda-setup">
-      <div className="agenda-setup__card">
-        <CheckSquare size={40} className="agenda-setup__icon" />
-        <h2 className="agenda-setup__title">Select a Task Database</h2>
-        <p className="agenda-setup__desc">
-          Choose which Notion database Agenda should use for your tasks.
-        </p>
+    <div className="setup-gate">
+      <div className="setup-gate__card">
+        <CheckSquare size={40} className="setup-gate__icon" />
+        <DashboardHeader
+          title={title ?? "Select a Task Database"}
+          subtitle={description ?? "Choose which Notion database should be used for this feature."}
+        />
 
         {isLoading && (
-          <div className="agenda-setup__loading">
-            <Loader2 size={20} className="agenda-setup__spinner" />
+          <div className="setup-gate__loading">
+            <Loader2 size={20} className="setup-gate__spinner" />
             <span>Loading databases...</span>
           </div>
         )}
 
-        {error && <div className="agenda-setup__error">{error}</div>}
+        {error && <div className="setup-gate__error">{error}</div>}
 
         {!isLoading && databases.length === 0 && !error && (
-          <div className="agenda-setup__empty">
+          <div className="setup-gate__empty">
             No databases found. Make sure your integration has access to at least one database.
           </div>
         )}
 
-        <div className="agenda-setup__db-list">
+        <div className="setup-gate__db-list">
           {databases.map((db) => {
             const name = db.title?.[0]?.plain_text ?? "Untitled Database";
             return (
               <button
                 key={db.id}
-                className="agenda-setup__db-item"
+                className="setup-gate__db-item"
                 onClick={() => handleSelectDatabase(db)}
               >
-                <span className="agenda-setup__db-icon">📋</span>
-                <span className="agenda-setup__db-name">{name}</span>
+                <span className="setup-gate__db-icon">📋</span>
+                <span className="setup-gate__db-name">{name}</span>
               </button>
             );
           })}

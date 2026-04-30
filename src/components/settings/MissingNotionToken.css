@@ -1,0 +1,66 @@
+.missing-token {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.missing-token__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 400px;
+  text-align: center;
+  padding: 2rem;
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-radius: var(--nd-radius);
+}
+
+.missing-token__icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--nd-bg-hover);
+  border-radius: 50%;
+}
+
+.missing-token__icon {
+  color: var(--nd-text-dim);
+}
+
+.missing-token__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--nd-text);
+  margin: 0;
+}
+
+.missing-token__desc {
+  font-size: 0.875rem;
+  color: var(--nd-text-dim);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.missing-token__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--nd-accent);
+  color: #ffffff;
+  border: 1px solid var(--nd-accent);
+  border-radius: var(--nd-radius);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.missing-token__cta:hover {
+  opacity: 0.88;
+}

@@ -26,7 +26,7 @@ import {
   getPropertyValue,
 } from "@/lib/notion";
 import type { RawNotionPage } from "@/lib/notion";
-import type { Mode, Phase, PageRow, Stats, LogEntry } from "@/components/dedup-types";
+import type { Mode, Phase, PageRow, Stats, LogEntry } from "@/components/dedup/dedup-types";
 import { NotionCache } from "@/lib/cache";
 
 const LOG_DISPLAY_LIMIT = 500;

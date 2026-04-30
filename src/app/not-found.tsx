@@ -3,10 +3,15 @@
 // Styled to match the site's design tokens (globals.css) rather than using
 // the default plain-text fallback.
 
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
+import Button from "@/components/ui/Button";
 import "./not-found.css";
 
 export default function NotFound() {
+  const router = useRouter();
+
   return (
     // Full-viewport centered layout defined in not-found.css
     <div className="notfound-wrapper">
@@ -16,13 +21,13 @@ export default function NotFound() {
       <h1 className="notfound-title">Page not found</h1>
 
       <p className="notfound-desc">
-        This page doesn&apos;t exist or may have been moved.
+        This page does not exist or may have been moved.
       </p>
 
       {/* Primary action: send the user back to a known-good route */}
-      <Link href="/" className="notfound-home-btn">
+      <Button variant="primary" onClick={() => router.push("/")}>
         Go home
-      </Link>
+      </Button>
     </div>
   );
 }

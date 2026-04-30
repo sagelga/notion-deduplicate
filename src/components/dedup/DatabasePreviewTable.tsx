@@ -1,77 +1,80 @@
 // DatabasePreviewTable.tsx
 //
-// Read-only paginated preview table showing sample pages from the selected Notion database
-// before deduplication. Uses the generic Table component with preview-specific configuration.
-//
-// The currently selected dedup field column is visually highlighted so the user
-// can judge the data quality of the field they chose.
+// Read-only sample of the selected database shown before a dedup run starts.
+// Displays up to 20 rows with the selected dedup field highlighted.
 
-"use client";
-
-import { type NotionProperty } from "@/lib/notion";
-import { Table, type TableColumn } from "./table/Table";
-import { CellValue } from "./table/CellValue";
-
-export interface Page {
-  id: string;
-  created_time: string;
-  title: string;
-  properties: Record<string, string | null>;
-}
-
-const PREVIEW_PAGE_SIZE = 20;
+import { useMemo } from "react";
+import { Table, type TableColumn } from "@/components/table/Table";
+import type { NotionProperty } from "@/lib/notion";
+import { DEDUPLICATABLE_TYPES } from "./useDatabasePreview";
+import type { PreviewPage } from "./useDatabasePreview";
+import "./DatabasePreviewTable.css";
 
 interface DatabasePreviewTableProps {
+  properties: NotionProperty[];
+  previewPages: PreviewPage[];
   previewLoading: boolean;
-  previewPages: Page[];
   previewHasMore: boolean;
-  previewColumns: NotionProperty[];
   selectedProperty: string;
 }
 
 export function DatabasePreviewTable({
-  previewLoading,
+  properties,
   previewPages,
+  previewLoading,
   previewHasMore,
-  previewColumns,
   selectedProperty,
 }: DatabasePreviewTableProps) {
-  const columns: TableColumn[] = [
-    {
-      key: "title",
-      label: "Title"
-    },
-    ...previewColumns.map((col) => ({
-      key: col.name,
-      label: col.name,
-      format: (value: unknown) => <CellValue value={value as string | null} />
-    }))
-  ];
+  const previewColumns = useMemo(
+    () =>
+      properties
+        .filter((p) => DEDUPLICATABLE_TYPES.has(p.type))
+        .sort((a, b) => {
+          if (a.name === selectedProperty) return -1;
+          if (b.name === selectedProperty) return 1;
+          return 0;
+        }),
+    [properties, selectedProperty]
+  );
 
-  const rows = previewPages.map((page) => ({
-    id: page.id,
-    title: page.title,
-    ...page.properties
-  }));
+  const tableRows = useMemo(
+    () =>
+      previewPages.map((page) => ({
+        id: page.id,
+        title: page.title,
+        ...page.properties,
+      })),
+    [previewPages]
+  );
+
+  const tableColumns = useMemo<TableColumn[]>(() => {
+    const cols: TableColumn[] = [
+      { key: "title", label: "Title" },
+      ...previewColumns.map((col) => ({
+        key: col.name,
+        label: col.name,
+      })),
+    ];
+    return cols;
+  }, [previewColumns]);
 
   return (
-    <Table
-      columns={columns}
-      rows={rows}
-      loading={previewLoading}
-      skeletonRows={5}
-      pageSize={PREVIEW_PAGE_SIZE}
-      activeColumn={selectedProperty}
-      hasMore={previewHasMore}
-      cardHeader={{
-        label: "Preview",
-        showRowCount: true,
-        showSpinner: true
-      }}
-      rowKey={(row) => String(row.id)}
-      className="db-preview"
-      striped={true}
-      hoverable={true}
-    />
+    <div className="db-main-content">
+      <Table
+        columns={tableColumns}
+        rows={tableRows}
+        loading={previewLoading}
+        hasMore={previewHasMore}
+        pageSize={20}
+        activeColumn={selectedProperty || "title"}
+        cardHeader={{
+          label: "Preview",
+          showRowCount: true,
+          showSpinner: true,
+        }}
+        rowKey={(row) => (row.id as string) || (row.title as string)}
+        skeletonRows={5}
+      />
+    </div>
   );
 }

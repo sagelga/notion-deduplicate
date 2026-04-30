@@ -1,4 +1,4 @@
-import type { LogEntry, Mode, Stats } from "@/components/dedup-types";
+import type { LogEntry, Mode, Stats } from "@/components/dedup/dedup-types";
 
 interface ExportSession {
   databaseId: string;

@@ -1,113 +1,45 @@
 /* ──────────────────────────────────────────────────────────────
    CookieConsentBanner.css
-   GDPR-compliant inline cookie consent banner with category cards,
-   toggle switches, policy links, and action buttons.
-   All colours from --nd-* design tokens (globals.css).
-
-   Note: cookie-toggle and cookie-btn styles have been removed
-   as the component now uses ui/Toggle and ui/Button.
    ────────────────────────────────────────────────────────────── */
 
 .cookie-banner-body {
-  padding: 0.25rem 0.25rem 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  padding: 0.25rem;
 }
 
-.cookie-banner-description {
+.cookie-banner-text {
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.cookie-banner-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+}
+
+.cookie-banner-footer {
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--nd-text-dim);
-  line-height: 1.65;
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.5;
 }
 
-/* ── Category cards ── */
-.cookie-categories {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.cookie-category {
-  background: var(--nd-bg-soft);
-  border: 1px solid var(--nd-divider);
-  border-radius: 6px;
-  padding: 0.875rem 1rem;
-}
-
-.cookie-category-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.4rem;
-}
-
-.cookie-category-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.cookie-category-name {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--nd-text);
-}
-
-.cookie-category-badge {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.1rem 0.4rem;
-  background: var(--nd-bg-active);
-  color: var(--nd-text-dim);
-  border-radius: 3px;
-}
-
-.cookie-category-desc {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--nd-text-dim);
-  line-height: 1.55;
-}
-
-/* ── Policy links ── */
-.cookie-policy-links {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  padding-top: 0.25rem;
-  border-top: 1px solid var(--nd-divider);
-}
-
-.cookie-policy-link {
-  color: var(--nd-accent);
+.cookie-banner-link {
+  color: var(--color-accent);
   text-decoration: underline;
-  text-underline-offset: 2px;
-  transition: opacity 0.15s ease;
+  transition: color 0.15s ease;
 }
 
-.cookie-policy-link:hover {
-  opacity: 0.75;
+.cookie-banner-link:hover {
+  color: var(--color-accent-hover);
 }
 
-.cookie-policy-sep {
-  color: var(--nd-divider-strong);
-}
-
-/* ── Action buttons — uses ui/Button with block prop ── */
-.cookie-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-@media (max-width: 400px) {
-  .cookie-actions {
-    flex-direction: column;
+@media (max-width: 480px) {
+  .cookie-banner-text {
+    font-size: 0.875rem;
   }
 }

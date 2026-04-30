@@ -43,11 +43,13 @@ export async function GET(request: Request) {
   try {
     // Notion requires HTTP Basic auth for the token exchange: credentials are
     // base64-encoded as "clientId:clientSecret" per the OAuth 2.0 spec.
+    const credentials = `${clientId}:${clientSecret}`;
+    const encoded = btoa(credentials);
     const response = await fetch("https://api.notion.com/v1/oauth/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+        Authorization: `Basic ${encoded}`,
       },
       body: JSON.stringify({
         grant_type: "authorization_code",

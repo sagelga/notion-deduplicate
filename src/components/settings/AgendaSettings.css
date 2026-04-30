@@ -1,5 +1,30 @@
 /* AgendaSettings.css */
 
+.agenda-token-notice {
+  padding: 0.875rem 1rem;
+  background: var(--nd-bg-soft);
+  border: 1px solid var(--nd-divider);
+  border-left: 3px solid var(--nd-accent);
+  border-radius: var(--nd-radius-md);
+  font-size: 0.875rem;
+  color: var(--nd-text-dim);
+  line-height: 1.5;
+}
+
+.agenda-token-notice p {
+  margin: 0;
+}
+
+.agenda-token-notice a {
+  color: var(--nd-accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.agenda-token-notice a:hover {
+  text-decoration: underline;
+}
+
 .agenda-settings {
   display: flex;
   flex-direction: column;

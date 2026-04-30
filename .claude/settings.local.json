@@ -37,7 +37,8 @@
       "Bash(cat /Users/kumamon/Developer/notion-deduplicate/postcss.config.*)",
       "Bash(find /Users/kumamon/Developer/notion-deduplicate/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec grep -l \"Buffer\\\\|Stream\\\\|EventEmitter\\\\|Worker\\\\|fork\\\\|exec\\\\|spawn\" {} \\\\;)",
       "Bash(grep -n \"Buffer\\\\|Stream\\\\|EventEmitter\\\\|Worker\\\\|fork\\\\|exec\\\\|spawn\" /Users/kumamon/Developer/notion-deduplicate/src/app/api/databases/[id]/pages/route.ts /Users/kumamon/Developer/notion-deduplicate/src/app/api/deduplicate/auto/route.ts /Users/kumamon/Developer/notion-deduplicate/src/app/api/deduplicate/route.ts /Users/kumamon/Developer/notion-deduplicate/src/utils/cookies.ts)",
-      "Bash(ls src/app/api/databases/[id]/ src/app/api/deduplicate/auto/)"
+      "Bash(ls src/app/api/databases/[id]/ src/app/api/deduplicate/auto/)",
+      "Bash(npm show *)"
     ]
   }
 }

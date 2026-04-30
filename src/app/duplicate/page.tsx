@@ -10,12 +10,13 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import DashboardHeader from "@/components/DashboardHeader";
+import DatabaseSelector from "@/components/dedup/DatabaseSelector";
+import MissingNotionToken from "@/components/settings/MissingNotionToken";
 import { useNotionToken } from "@/hooks/useNotionToken";
 import { listDatabases, type NotionDatabase } from "@/lib/notion";
-import DatabaseSelector from "@/components/dedup/DatabaseSelector";
-import NotConfiguredView from "@/components/dedup/NotConfiguredView";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import "./page.css";
 
 export default function DuplicatePage() {
@@ -23,7 +24,6 @@ export default function DuplicatePage() {
   const router = useRouter();
   // null = fetch in flight or not started; array = results (possibly empty)
   const [databases, setDatabases] = useState<NotionDatabase[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Load databases when token is available.
   // Only calls setState inside async callbacks — avoids cascading renders.
@@ -34,57 +34,11 @@ export default function DuplicatePage() {
       .catch((err) => setLoadError(err instanceof Error ? err.message : String(err)));
   }, [token]);
 
-  // Derive loading: token present, fetch not yet resolved, no error
-  const loading = !!token && databases === null && loadError === null;
-
   // SSR/hydration guard — token is null before localStorage hydrates
-  if (token === null) {
-    return <div className="dashboard-wrapper" />;
-  }
-
-  // Show "not configured" card if no token is present
-  if (!token) {
+  if (token === null || token === "") {
     return (
       <div className="dashboard-wrapper">
-        <div className="dashboard-header">
-          <div>
-            <h1 className="dashboard-title">Duplicate</h1>
-            <p className="dashboard-subtitle">Connect your Notion integration to get started</p>
-          </div>
-        </div>
-        <div className="dashboard-setup-container">
-          <NotConfiguredView />
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="dashboard-wrapper">
-        <p style={{ padding: "2rem" }}>Loading databases…</p>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (loadError) {
-    return (
-      <div className="dashboard-wrapper">
-        <div className="dashboard-error-card">
-          <h2 className="dashboard-error-title">Error</h2>
-          <p className="dashboard-error-desc">{loadError}</p>
-          <button
-            onClick={() => {
-              clearToken();
-              router.push("/");
-            }}
-            className="dashboard-logout-btn"
-          >
-            Logout &amp; try a different token
-          </button>
-        </div>
+        <MissingNotionToken />
       </div>
     );
   }
@@ -92,21 +46,10 @@ export default function DuplicatePage() {
   // Show database selector
   return (
     <div className="dashboard-wrapper">
-      <div className="dashboard-header">
-        <div>
-          <h1 className="dashboard-title">Duplicate</h1>
-          <p className="dashboard-subtitle">Select a database and a field to find and remove duplicates</p>
-        </div>
-        <button
-          onClick={() => {
-            clearToken();
-            router.push("/");
-          }}
-          className="dashboard-logout-btn"
-        >
-          Logout
-        </button>
-      </div>
+      <DashboardHeader
+        title="Duplicate"
+        subtitle="Select a database and a field to find and remove duplicates"
+      />
       <DatabaseSelector databases={databases ?? []} token={token} />
     </div>
   );

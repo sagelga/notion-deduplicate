@@ -3,13 +3,12 @@
 
 "use client";
 
-import AgendaSetupGate from "@/components/agenda/AgendaSetupGate";
 import AgendaShell from "@/components/agenda/AgendaShell";
+import CalendarView from "@/components/agenda/CalendarView";
 import QuickAddBar from "@/components/agenda/QuickAddBar";
 import TodayTaskList from "@/components/agenda/TodayTaskList";
-import InboxTaskList from "@/components/agenda/InboxTaskList";
 import UpcomingTaskList from "@/components/agenda/UpcomingTaskList";
-import CalendarView from "@/components/agenda/CalendarView";
+import SetupGate from "@/components/dedup/SetupGate";
 import Notification from "@/components/ui/Notification";
 import { useAgenda } from "@/hooks/AgendaContext";
 import { useAgendaSync } from "@/hooks/useAgendaSync";
@@ -18,9 +17,9 @@ import "./page.css";
 
 export default function AgendaContent() {
   return (
-    <AgendaSetupGate>
+    <SetupGate>
       <AgendaShellWrapper />
-    </AgendaSetupGate>
+    </SetupGate>
   );
 }
 
@@ -35,7 +34,6 @@ function AgendaShellWrapper() {
   const renderView = () => {
     switch (currentView) {
       case "today": return <TodayTaskList />;
-      case "inbox": return <InboxTaskList />;
       case "upcoming": return <UpcomingTaskList />;
       case "calendar": return <CalendarView />;
       default: return <TodayTaskList />;

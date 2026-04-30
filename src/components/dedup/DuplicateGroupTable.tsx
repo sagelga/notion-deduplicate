@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { DuplicateGroup, DedupeTableRow } from "./dedup-view-types";
-import { Table, type TableColumn } from "./table/Table";
+import { Table, type TableColumn } from "@/components/table/Table";
 
 interface DuplicateGroupTableProps {
   group: DuplicateGroup;

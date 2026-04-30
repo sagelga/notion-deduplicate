@@ -14,9 +14,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Table, type TableColumn } from "./table/Table";
-import { CellValue } from "./table/CellValue";
-import { Badge, type BadgeVariant } from "./ui";
+import { Table, type TableColumn } from "@/components/table/Table";
+import { CellValue } from "@/components/table/CellValue";
+import { Badge, type BadgeVariant } from "@/components/ui";
 import type { PageRow, Phase } from "./dedup-types";
 
 const PAGE_SIZE = 20;

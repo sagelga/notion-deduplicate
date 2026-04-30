@@ -20,9 +20,11 @@ import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { DedupProvider } from "@/hooks/useDedup";
 import { LanguageProvider } from "@/hooks/useLanguage";
+import { AgendaProvider } from "@/hooks/AgendaContext";
 import Navbar, { SettingsGear } from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import CookieConsentBanner from "@/components/ui/_legacy/CookieConsentBanner";
+import CookieSettingsModal from "@/components/cookies/CookieSettingsModal";
+import CookieConsentBanner from "@/components/cookies/CookieConsentBanner";
 import "./globals.css";
 
 interface NavItem {
@@ -80,7 +82,8 @@ export default function RootLayout({
         <ThemeProvider>
           <DedupProvider>
             <LanguageProvider>
-              <Navbar
+              <AgendaProvider>
+                <Navbar
                 brandName="notion-tools"
                 links={NAV_LINKS}
                 controls={<SettingsGear />}
@@ -90,6 +93,7 @@ export default function RootLayout({
               </main>
               <Footer />
               <CookieConsentBanner />
+              </AgendaProvider>
             </LanguageProvider>
           </DedupProvider>
         </ThemeProvider>

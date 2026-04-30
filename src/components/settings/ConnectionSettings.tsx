@@ -11,7 +11,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useNotionToken } from "@/hooks/useNotionToken";
-import { Button } from "@/components/ui";
+import { Button, Input, Card, CardBody } from "@/components/ui";
+import { EyeIcon, EyeOffIcon } from "./ConnectionIcons";
+import { ConnectionStatus } from "./ConnectionStatus";
+import { SetupCarousel } from "./SetupCarousel";
 import "./ConnectionSettings.css";
 
 function validateToken(value: string): string {
@@ -24,282 +27,119 @@ function validateToken(value: string): string {
   return "";
 }
 
-interface Step {
-  description: React.ReactNode;
-  image?: string;
-  critical?: boolean;
+interface TokenInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  error: string;
+  showToken: boolean;
+  onToggleVisibility: () => void;
 }
 
-const steps: Step[] = [
-  {
-    description: (
-      <>
-        Go to{" "}
-        <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer">
-          notion.so/my-integrations
-        </a>{" "}
-        → click <strong>Create a new integration</strong>.
-      </>
-    ),
-    image: "/images/step-5-database-connections.png",
-  },
-  {
-    description: (
-      <>
-        Fill in the integration <strong>name</strong> and select the <strong>associated workspace</strong>.
-      </>
-    ),
-    image: "/images/step-2-copy-token.png",
-  },
-  {
-    description: (
-      <>
-        Click the <strong>Content access</strong> tab at the top of the integration settings.
-      </>
-    ),
-    image: "/images/step-6-alternative-connection.png",
-  },
-  {
-    description: (
-      <>
-        Click <strong>Edit access</strong> to open the page and database selection modal.
-      </>
-    ),
-    image: "/images/step-3-content-access.png",
-  },
-  {
-    description: (
-      <>
-        Search for or type the <strong>database name</strong> and select it to grant the integration access.
-      </>
-    ),
-    image: "/images/step-4-manage-page-access.png",
-    critical: true,
-  },
-  {
-    description: (
-      <>
-        Copy the <strong>Internal integration secret</strong> (<code>secret_…</code> or <code>ntn_…</code>) from the <strong>Configuration</strong> tab.
-      </>
-    ),
-    image: "/images/step-1-create-integration.png",
-  },
-];
+function TokenInput({ value, onChange, error, showToken, onToggleVisibility }: TokenInputProps) {
+  return (
+    <div className="connection-input-row">
+      <Input
+        type={showToken ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="secret_... or ntn_..."
+        variant="mono"
+        error={error}
+        className="connection-input"
+      />
+      <button
+        type="button"
+        className="connection-toggle-visibility"
+        onClick={onToggleVisibility}
+        aria-label={showToken ? "Hide token" : "Show token"}
+      >
+        {showToken ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  );
+}
 
-export default function ConnectionSettings() {
-  const { token, setToken, clearToken } = useNotionToken();
-  const router = useRouter();
+interface TokenFormProps {
+  onConnect: (token: string) => void;
+  onDisconnect?: () => void;
+  isConnected: boolean;
+}
+
+function TokenForm({ onConnect, onDisconnect, isConnected }: TokenFormProps) {
+  const { setToken } = useNotionToken();
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
   const [showToken, setShowToken] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
 
-  const isConnected = !!token;
-
-  const goPrev = () => setCurrentStep((s) => Math.max(0, s - 1));
-  const goNext = () => setCurrentStep((s) => Math.min(steps.length - 1, s + 1));
-
-  const isFirst = currentStep === 0;
-  const isLast = currentStep === steps.length - 1;
-  const step = steps[currentStep];
-
-  function handleConnect(e: React.FormEvent) {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const validationError = validateToken(inputValue);
     if (validationError) {
       setError(validationError);
       return;
     }
-    setError("");
-    setToken(inputValue.trim());
+    const trimmed = inputValue.trim();
+    setToken(trimmed);
     setInputValue("");
-    router.push("/duplicate");
-  }
+    onConnect(trimmed);
+  };
 
-  function handleDisconnect() {
-    clearToken();
+  const handleDisconnect = () => {
     setInputValue("");
-  }
+    onDisconnect?.();
+  };
+
+  return (
+    <Card>
+      <CardBody>
+        <form onSubmit={handleSubmit} className="connection-form">
+          <div className="connection-field">
+            <label className="connection-label">Notion Integration Token</label>
+            <TokenInput
+              value={inputValue}
+              onChange={(val) => {
+                setInputValue(val);
+                setError("");
+              }}
+              error={error}
+              showToken={showToken}
+              onToggleVisibility={() => setShowToken((v) => !v)}
+            />
+          </div>
+          <div className="connection-actions">
+            <Button variant="primary" type="submit">
+              {isConnected ? "Update Token" : "Connect"}
+            </Button>
+            {isConnected && onDisconnect && (
+              <Button variant="danger" onClick={handleDisconnect}>
+                Disconnect
+              </Button>
+            )}
+          </div>
+        </form>
+      </CardBody>
+    </Card>
+  );
+}
+
+export default function ConnectionSettings() {
+  const { token, clearToken } = useNotionToken();
+  const router = useRouter();
+  const isConnected = !!token;
+
+  const handleConnect = () => router.push("/duplicate");
 
   return (
     <div className="connection-settings">
-      <div className="connection-status">
-        <div className="connection-status-chip">
-          <span
-            className={`connection-status-dot ${isConnected ? "connected" : "disconnected"}`}
-          />
-          <span className="connection-status-label">
-            {isConnected ? "Connected" : "Not connected"}
-          </span>
-        </div>
-      </div>
+      <ConnectionStatus isConnected={isConnected} />
 
-      {!isConnected && (
-        <>
-          {/* 6-step tutorial carousel */}
-          <div className="connection-stepper">
-            <p className="connection-stepper-header">How to set up your Notion integration</p>
-            <div className="flex flex-col gap-3">
-              {/*
-                Grid overlay: all descriptions occupy the same grid cell ([grid-area:1/1]).
-                The grid auto-sizes to the tallest step, so the container height never
-                changes as you navigate. Only the active step is visible; the rest are
-                invisible but still in flow, holding the space open.
-              */}
-              <div className="grid">
-                {steps.map((s, i) => (
-                  <p
-                    key={i}
-                    className={`[grid-area:1/1] connection-step-description ${s.critical ? "critical" : ""} ${i !== currentStep ? "invisible" : ""}`}
-                  >
-                    {s.description}
-                  </p>
-                ))}
-              </div>
-              {step.image && (
-                <div className="flex h-[220px] shrink-0 items-center justify-center overflow-hidden rounded bg-[var(--color-canvas)]">
-                  <img src={step.image} alt={`Step ${currentStep + 1}`} className="connection-step-image" />
-                </div>
-              )}
-            </div>
+      {!isConnected && <SetupCarousel />}
 
-            <div className="connection-stepper-nav">
-              <Button
-                variant="secondary"
-                onClick={goPrev}
-                disabled={isFirst}
-              >
-                ← Prev
-              </Button>
-              <span className="connection-stepper-dots">
-                {steps.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`connection-stepper-dot ${i === currentStep ? "active" : ""}`}
-                    onClick={() => setCurrentStep(i)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") setCurrentStep(i);
-                    }}
-                  />
-                ))}
-              </span>
-              <Button
-                variant="secondary"
-                onClick={goNext}
-                disabled={isLast}
-              >
-                Next →
-              </Button>
-            </div>
-          </div>
-
-          {/* Token input + connect */}
-          <form onSubmit={handleConnect} className="connection-form">
-            <div className="connection-field">
-              <label className="connection-label">
-                Notion Integration Token
-              </label>
-              <div className="connection-input-row">
-                <input
-                  type={showToken ? "text" : "password"}
-                  value={inputValue}
-                  onChange={(e) => {
-                    setInputValue(e.target.value);
-                    setError("");
-                  }}
-                  placeholder="secret_... or ntn_..."
-                  className="connection-input"
-                />
-                <button
-                  type="button"
-                  className="connection-toggle-visibility"
-                  onClick={() => setShowToken((v) => !v)}
-                  aria-label={showToken ? "Hide token" : "Show token"}
-                >
-                  {showToken ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {error && <p className="connection-error">{error}</p>}
-
-            <div className="connection-actions">
-              <Button variant="primary" type="submit">
-                Connect
-              </Button>
-            </div>
-          </form>
-        </>
-      )}
-
-      {isConnected && (
-        <form onSubmit={handleConnect} className="connection-form">
-          <div className="connection-field">
-            <label className="connection-label">
-              Notion Integration Token
-            </label>
-            <div className="connection-input-row">
-              <input
-                type={showToken ? "text" : "password"}
-                value={inputValue}
-                onChange={(e) => {
-                  setInputValue(e.target.value);
-                  setError("");
-                }}
-                placeholder="secret_... or ntn_..."
-                className="connection-input"
-              />
-              <button
-                type="button"
-                className="connection-toggle-visibility"
-                onClick={() => setShowToken((v) => !v)}
-                aria-label={showToken ? "Hide token" : "Show token"}
-              >
-                {showToken ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                    <line x1="1" y1="1" x2="23" y2="23" />
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {error && <p className="connection-error">{error}</p>}
-
-          <div className="connection-actions">
-            <Button variant="primary" type="submit">
-              Update Token
-            </Button>
-            <button
-              type="button"
-              className="connection-btn connection-btn-danger"
-              onClick={handleDisconnect}
-            >
-              Disconnect
-            </button>
-          </div>
-        </form>
-      )}
+      <TokenForm
+        onConnect={handleConnect}
+        onDisconnect={clearToken}
+        isConnected={isConnected}
+      />
     </div>
   );
 }

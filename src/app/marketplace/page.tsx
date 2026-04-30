@@ -91,19 +91,143 @@ const SORT_OPTIONS = [
   { label: "Category", value: "category" },
 ];
 
+type SortValue = "featured" | "trending" | "alphabetical" | "category";
+type Template = (typeof TEMPLATES)[number];
+
+interface Filters {
+  search: string;
+  category: string;
+  sort: SortValue;
+}
+
+function CardPreview({ template, size }: { template: Template; size: "featured" | "card" }) {
+  return (
+    <div
+      className={size === "featured" ? "mkt-featured-preview" : "mkt-card-preview"}
+      style={{ background: template.gradient }}
+    >
+      <span className={size === "featured" ? "mkt-featured-emoji" : "mkt-card-emoji"}>
+        {template.emoji}
+      </span>
+      {size === "card" && template.trending && (
+        <span className="mkt-card-badge">🔥 Trending</span>
+      )}
+    </div>
+  );
+}
+
+function TemplateCard({ template }: { template: Template }) {
+  return (
+    <a
+      href={template.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mkt-card"
+    >
+      <CardPreview template={template} size="card" />
+      <div className="mkt-card-body">
+        <span className="mkt-card-category">{template.category}</span>
+        <h2 className="mkt-card-name">{template.name}</h2>
+        <p className="mkt-card-desc">{template.description}</p>
+      </div>
+      <div className="mkt-card-footer">
+        <span className="mkt-card-btn">Duplicate to Notion →</span>
+      </div>
+    </a>
+  );
+}
+
+function FeaturedCard({ template }: { template: Template }) {
+  return (
+    <a
+      href={template.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mkt-featured-card"
+    >
+      <CardPreview template={template} size="featured" />
+      <div className="mkt-featured-info">
+        <span className="mkt-badge">Featured</span>
+        <h3 className="mkt-featured-name">{template.name}</h3>
+        <p className="mkt-featured-desc">{template.description}</p>
+      </div>
+    </a>
+  );
+}
+
+function ControlBar({
+  filters,
+  onChange,
+}: {
+  filters: Filters;
+  onChange: (next: Filters) => void;
+}) {
+  return (
+    <div className="mkt-controls">
+      <input
+        type="text"
+        placeholder="Search templates..."
+        value={filters.search}
+        onChange={(e) => onChange({ ...filters, search: e.target.value })}
+        className="mkt-search"
+      />
+      <div className="mkt-filters">
+        <div className="mkt-filter-group">
+          <label className="mkt-filter-label">Category</label>
+          <select
+            value={filters.category}
+            onChange={(e) => onChange({ ...filters, category: e.target.value })}
+            className="mkt-select"
+          >
+            {CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mkt-filter-group">
+          <label className="mkt-filter-label">Sort by</label>
+          <select
+            value={filters.sort}
+            onChange={(e) => onChange({ ...filters, sort: e.target.value as SortValue })}
+            className="mkt-select"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ onReset }: { onReset: () => void }) {
+  return (
+    <div className="mkt-empty">
+      <p className="mkt-empty-text">No templates match your search.</p>
+      <button className="mkt-empty-reset" onClick={onReset}>
+        Reset filters
+      </button>
+    </div>
+  );
+}
+
 export default function MarketplacePage() {
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
-  const [sort, setSort] = useState("featured");
+  const [filters, setFilters] = useState<Filters>({
+    search: "",
+    category: "All",
+    sort: "featured",
+  });
 
   const filtered = useMemo(() => {
-    // Start with a shallow copy so the sort (which mutates in place) doesn't
-    // affect the original TEMPLATES array.
     let result = [...TEMPLATES];
 
-    // Search filter — case-insensitive match against name and description.
-    if (search.trim()) {
-      const query = search.toLowerCase();
+    if (filters.search.trim()) {
+      const query = filters.search.toLowerCase();
       result = result.filter(
         (t) =>
           t.name.toLowerCase().includes(query) ||
@@ -111,14 +235,11 @@ export default function MarketplacePage() {
       );
     }
 
-    // Category filter — "All" is the sentinel value meaning no filter applied.
-    if (category !== "All") {
-      result = result.filter((t) => t.category === category);
+    if (filters.category !== "All") {
+      result = result.filter((t) => t.category === filters.category);
     }
 
-    // Sort — boolean flags are converted to 0/1 so subtraction gives a
-    // stable numeric comparator (true items sort first).
-    switch (sort) {
+    switch (filters.sort) {
       case "featured":
         result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
         break;
@@ -134,15 +255,17 @@ export default function MarketplacePage() {
     }
 
     return result;
-  }, [search, category, sort]);
+  }, [filters]);
 
-  // Derived from the full TEMPLATES list (not filtered) so the featured section
-  // always shows the same items regardless of the active search/category filter.
-  const featuredItems = TEMPLATES.filter((t) => t.featured);
+  const featuredItems = useMemo(() => TEMPLATES.filter((t) => t.featured), []);
+
+  const showFeatured = !filters.search && filters.category === "All" && filters.sort === "featured";
+
+  const resetFilters = () =>
+    setFilters({ search: "", category: "All", sort: "featured" });
 
   return (
     <div className="mkt-wrapper">
-      {/* Hero */}
       <div className="mkt-hero">
         <h1 className="mkt-title">Free Notion Templates</h1>
         <p className="mkt-subtitle">
@@ -150,119 +273,29 @@ export default function MarketplacePage() {
         </p>
       </div>
 
-      {/* Control bar */}
-      <div className="mkt-controls">
-        <input
-          type="text"
-          placeholder="Search templates..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="mkt-search"
-        />
-        <div className="mkt-filters">
-          <div className="mkt-filter-group">
-            <label className="mkt-filter-label">Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="mkt-select"
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mkt-filter-group">
-            <label className="mkt-filter-label">Sort by</label>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="mkt-select"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+      <ControlBar filters={filters} onChange={setFilters} />
 
-      {/* Featured section — only shown when the user hasn't applied any filters,
-          to avoid it competing with the filtered results grid. */}
-      {!search && category === "All" && sort === "featured" && (
+      {showFeatured && (
         <div className="mkt-featured">
           <h2 className="mkt-section-label">✨ Featured Templates</h2>
           <div className="mkt-featured-grid">
             {featuredItems.map((tpl) => (
-              <a
-                key={tpl.id}
-                href={tpl.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mkt-featured-card"
-              >
-                <div className="mkt-featured-preview" style={{ background: tpl.gradient }}>
-                  <span className="mkt-featured-emoji">{tpl.emoji}</span>
-                </div>
-                <div className="mkt-featured-info">
-                  <span className="mkt-badge">Featured</span>
-                  <h3 className="mkt-featured-name">{tpl.name}</h3>
-                  <p className="mkt-featured-desc">{tpl.description}</p>
-                </div>
-              </a>
+              <FeaturedCard key={tpl.id} template={tpl} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Main grid */}
       <div className="mkt-section">
         <h2 className="mkt-section-label">
           {filtered.length} Template{filtered.length !== 1 ? "s" : ""}
         </h2>
         <div className="mkt-grid">
           {filtered.map((tpl) => (
-            <a
-              key={tpl.id}
-              href={tpl.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mkt-card"
-            >
-              <div className="mkt-card-preview" style={{ background: tpl.gradient }}>
-                <span className="mkt-card-emoji">{tpl.emoji}</span>
-                {tpl.trending && <span className="mkt-card-badge">🔥 Trending</span>}
-              </div>
-              <div className="mkt-card-body">
-                <span className="mkt-card-category">{tpl.category}</span>
-                <h2 className="mkt-card-name">{tpl.name}</h2>
-                <p className="mkt-card-desc">{tpl.description}</p>
-              </div>
-              <div className="mkt-card-footer">
-                <span className="mkt-card-btn">Duplicate to Notion →</span>
-              </div>
-            </a>
+            <TemplateCard key={tpl.id} template={tpl} />
           ))}
         </div>
-        {filtered.length === 0 && (
-          <div className="mkt-empty">
-            <p className="mkt-empty-text">No templates match your search.</p>
-            <button
-              className="mkt-empty-reset"
-              onClick={() => {
-                setSearch("");
-                setCategory("All");
-                setSort("featured");
-              }}
-            >
-              Reset filters
-            </button>
-          </div>
-        )}
+        {filtered.length === 0 && <EmptyState onReset={resetFilters} />}
       </div>
     </div>
   );

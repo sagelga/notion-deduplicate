@@ -33,6 +33,7 @@ export interface DedupStats {
   duplicatesFound: number;
   actioned: number;
   errors: number;
+  retrying: number;
 }
 
 export interface DedupState {
@@ -72,7 +73,7 @@ const initialState: DedupState = {
   databaseId: "",
   databaseName: "",
   fieldName: "",
-  stats: { scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0 },
+  stats: { scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0, retrying: 0 },
   errorMessage: "",
 };
 
@@ -150,7 +151,7 @@ export const DedupProvider: React.FC<{ children: React.ReactNode }> = ({
         databaseId: params.databaseId,
         databaseName: params.databaseName,
         fieldName: params.fieldName,
-        stats: { scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0 },
+stats: { scanned: 0, duplicatesFound: 0, actioned: 0, errors: 0, retrying: 0 },
         errorMessage: "",
       });
     },

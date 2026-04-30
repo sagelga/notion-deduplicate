@@ -9,7 +9,7 @@
 
 import { useMemo, useState } from "react";
 import type { PageRow, Stats, Mode } from "./dedup-types";
-import { Button, Tag, Kbd } from "./ui";
+import { Button, Tag, Kbd } from "@/components/ui";
 import "./DedupReviewGroups.css";
 
 interface Group {

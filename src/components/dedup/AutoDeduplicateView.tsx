@@ -19,6 +19,9 @@ import { DedupReviewGroups } from "./DedupReviewGroups";
 import { DedupDoneView } from "./DedupDoneView";
 import { DedupEmptyView } from "./DedupEmptyView";
 import { DedupStatsBar } from "./DedupStatsBar";
+import { AutoDedupHeader } from "./AutoDedupHeader";
+import { AutoDedupNotices } from "./AutoDedupNotices";
+import { AutoDedupControls } from "./AutoDedupControls";
 import "./AutoDeduplicateView.css";
 
 export default function AutoDeduplicateView({
@@ -149,8 +152,6 @@ export default function AutoDeduplicateView({
     URL.revokeObjectURL(blobUrl);
   };
 
-  const verb = mode === "archive" ? "archived" : "deleted";
-
   const displayLogs = useMemo(
     () => logs.filter((e) => {
       if (e.type === "start") return true;
@@ -171,7 +172,6 @@ export default function AutoDeduplicateView({
     return rows;
   }, [rows, statusFilter]);
 
-  // Count unique duplicate groups (field values that have pending rows)
   const dupGroupCount = useMemo(
     () => new Set(rows.filter((r) => r.status === "pending").map((r) => r.fieldValue)).size,
     [rows]
@@ -180,7 +180,7 @@ export default function AutoDeduplicateView({
   const isRunning = phase === "running";
   const isPaused = phase === "paused";
 
-  // ── S6 empty state ─────────────────────────────────────────────
+  // S6 empty state
   if ((phase === "done" || phase === "preview") && stats.duplicatesFound === 0) {
     return (
       <DedupEmptyView
@@ -192,7 +192,7 @@ export default function AutoDeduplicateView({
     );
   }
 
-  // ── S5 done state (non-dry-run) ────────────────────────────────
+  // S5 done state (non-dry-run)
   if (!dryRun && phase === "done" && stats.actioned > 0) {
     return (
       <DedupDoneView
@@ -207,7 +207,7 @@ export default function AutoDeduplicateView({
     );
   }
 
-  // ── S4 review groups (dry-run preview) ─────────────────────────
+  // S4 review groups (dry-run preview)
   if (dryRun && phase === "preview") {
     return (
       <DedupReviewGroups
@@ -222,35 +222,23 @@ export default function AutoDeduplicateView({
 
   return (
     <div className="auto-dedup-wrapper">
-      {/* Heading */}
-      <div className="auto-scan-heading">
-        <h1 className="auto-scan-title-lg">
-          {isRunning ? "Scanning…" : isPaused ? "Paused" : "Scan complete"}
-        </h1>
-        {isRunning && (
-          <span className="auto-scan-page-count">
-            {stats.scanned} pages scanned · {databaseName}
-          </span>
-        )}
-        {!isRunning && !isPaused && phase !== "error" && (
-          <span className="auto-scan-complete-tag">
-            {dupGroupCount} groups found
-          </span>
-        )}
-      </div>
+      <AutoDedupHeader
+        phase={phase}
+        stats={stats}
+        databaseName={databaseName}
+        dupGroupCount={dupGroupCount}
+      />
 
-      {/* Indeterminate progress bar during scan */}
       {(isRunning || isPaused) && (
         <div className="auto-scan-bar-track">
           <div className={`auto-scan-bar-fill${isPaused ? " auto-scan-bar-fill--paused" : ""}`} />
         </div>
       )}
 
-      {/* Stats bar with click-to-filter counters */}
       {(isRunning || isPaused || phase === "done") && (
         <DedupStatsBar
           stats={stats}
-          verb={verb}
+          verb={mode === "archive" ? "archived" : "deleted"}
           phase={phase}
           activeStage={activeStage}
           dryRun={dryRun}
@@ -259,50 +247,14 @@ export default function AutoDeduplicateView({
         />
       )}
 
-      {/* Queue info notice — shown while deletion is running */}
-      {(isRunning || isPaused) && !dryRun && stats.duplicatesFound > 0 && (
-        <div className="auto-queue-notice auto-queue-notice--info">
-          <span className="auto-queue-notice__icon">⏳</span>
-          <span>
-            Deletions are queued due to Notion API limits — pages are removed one at a time.
-            First-attempt failures are retried automatically once.
-          </span>
-        </div>
-      )}
-
-      {/* Manual deletion notice — shown after completion if permanent failures exist */}
-      {phase === "done" && stats.errors > 0 && (
-        <div className="auto-queue-notice auto-queue-notice--warn">
-          <span className="auto-queue-notice__icon">⚠️</span>
-          <div>
-            <strong>{stats.errors} {stats.errors === 1 ? "page" : "pages"} could not be deleted after 2 attempts.</strong>
-            <span> Open each page marked <em>failed</em> in the table below and delete it manually in Notion, or re-run the scan.</span>
-          </div>
-        </div>
-      )}
+      <AutoDedupNotices phase={phase} dryRun={dryRun} stats={stats} />
 
       {phase === "error" && <div className="auto-dedup-error">{errorMessage}</div>}
 
-      {/* Results table */}
       <DedupResultsTable rows={filteredRows} fieldName={fieldName} dryRun={dryRun} phase={phase} />
 
-      {/* Controls */}
-      <div className="auto-scan-controls">
-        {isRunning && (
-          <span className="auto-scan-hint">
-            {dryRun ? "preview mode · no changes yet" : "you can start reviewing visible groups now"}
-          </span>
-        )}
-        <div className="auto-scan-btns">
-          {(isRunning || isPaused) && (
-            <button className="auto-pause-btn" onClick={handlePause}>
-              {isPaused ? "Resume" : "Pause"}
-            </button>
-          )}
-        </div>
-      </div>
+      <AutoDedupControls isRunning={isRunning} isPaused={isPaused} dryRun={dryRun} onPause={handlePause} />
 
-      {/* Log panel */}
       <DedupLogPanel
         displayLogs={displayLogs}
         totalLogCount={allLogsRef.current.length}
