@@ -26,9 +26,8 @@ import { archivePage, deletePage } from "@/lib/notion";
 import { DedupGroupsList } from "./DedupGroupsList";
 import { DedupActionBar } from "./DedupActionBar";
 import type { Page, DuplicateGroup, Mode } from "./dedup-types";
+import { GROUPS_PER_PAGE } from "./dedup-types";
 import "./DeduplicateView.css";
-
-const GROUPS_PER_PAGE = 10;
 
 export default function DeduplicateView({
   pages,

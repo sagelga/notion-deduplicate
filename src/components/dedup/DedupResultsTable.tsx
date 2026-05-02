@@ -18,8 +18,7 @@ import { Table, type TableColumn } from "@/components/table/Table";
 import { CellValue } from "@/components/table/CellValue";
 import { Badge, type BadgeVariant } from "@/components/ui";
 import type { PageRow, Phase } from "./dedup-types";
-
-const PAGE_SIZE = 20;
+import { RESULTS_TABLE_PAGE_SIZE } from "./dedup-types";
 
 function notionPageUrl(id: string) {
   return `https://www.notion.so/${id.replace(/-/g, "")}`;
@@ -87,7 +86,7 @@ export function DedupResultsTable({ rows, fieldName, dryRun, phase }: DedupResul
         columns={columns}
         rows={tableRows}
         rowKey={(row) => (row as unknown as PageRow).id}
-        pageSize={PAGE_SIZE}
+        pageSize={RESULTS_TABLE_PAGE_SIZE}
         className="auto-table"
       />
     </div>

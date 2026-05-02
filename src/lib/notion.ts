@@ -28,6 +28,7 @@
 //    (useAgendaSync, useAutoDeduplicate) since they decide filter/sort strategy.
 
 import { NotionCache } from "./cache";
+import { MAX_RETRY_WAIT_MS, RATE_LIMIT_DECAY } from "./constants";
 
 type NotionRichText = { plain_text: string }[];
 type NotionSelect = { name: string } | null;
@@ -208,7 +209,7 @@ async function fetchWithRetry(
       const retryAfter = res.headers.get("Retry-After");
       const waitMs = retryAfter
         ? parseFloat(retryAfter) * 1000
-        : Math.min(1000 * Math.pow(2, attempt), 64_000);
+        : Math.min(1000 * Math.pow(2, attempt), MAX_RETRY_WAIT_MS);
       await sleep(waitMs);
       continue;
     }
@@ -278,7 +279,7 @@ export async function* paginateDatabase(
 
       if (res.ok) {
         // Success: decay adaptive delay toward 0 (gradually speed back up).
-        adaptiveDelayMs = Math.floor(adaptiveDelayMs * 0.75);
+        adaptiveDelayMs = Math.floor(adaptiveDelayMs * RATE_LIMIT_DECAY);
         return res.json() as Promise<PageResult>;
       }
 
@@ -289,7 +290,7 @@ export async function* paginateDatabase(
         const retryAfter = res.headers.get("Retry-After");
         const waitMs = retryAfter
           ? parseFloat(retryAfter) * 1000
-          : Math.min(1000 * Math.pow(2, attempt), 64_000);
+          : Math.min(1000 * Math.pow(2, attempt), MAX_RETRY_WAIT_MS);
         // Raise adaptive delay so the NEXT batch is proactively slowed too.
         adaptiveDelayMs = Math.max(adaptiveDelayMs, waitMs);
         await sleep(waitMs);

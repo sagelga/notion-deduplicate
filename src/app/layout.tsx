@@ -67,7 +67,7 @@ export const metadata: Metadata = {
       "Clean up duplicate Notion pages, manage your agenda, and get more out of Notion. Free tools for Notion power users.",
     images: [
       {
-        url: "/opengraph-image.png",
+        url: "/opengraph-image.webp",
         width: 1200,
         height: 630,
         alt: "notion-tools — Clean up duplicate Notion pages",
@@ -81,7 +81,7 @@ export const metadata: Metadata = {
     title: "notion-tools — Notion Deduplication & Productivity Tools",
     description:
       "Clean up duplicate Notion pages, manage your agenda, and get more out of Notion. Free tools for Notion power users.",
-    images: ["/opengraph-image.png"],
+    images: ["/opengraph-image.webp"],
   },
   icons: {
     icon: [

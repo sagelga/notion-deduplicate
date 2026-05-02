@@ -27,9 +27,9 @@ import {
 } from "@/lib/notion";
 import type { RawNotionPage } from "@/lib/notion";
 import type { Mode, Phase, PageRow, Stats, LogEntry } from "@/components/dedup/dedup-types";
+import { LOG_DISPLAY_LIMIT } from "@/components/dedup/dedup-types";
+import { MAX_RETRY_WAIT_MS, RATE_LIMIT_DECAY } from "@/lib/constants";
 import { NotionCache } from "@/lib/cache";
-
-const LOG_DISPLAY_LIMIT = 500;
 
 const STATUS_ORDER: Record<string, number> = {
   kept: 0,
