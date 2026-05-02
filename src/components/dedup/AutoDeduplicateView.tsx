@@ -21,7 +21,6 @@ import { DedupEmptyView } from "./DedupEmptyView";
 import { DedupStatsBar } from "./DedupStatsBar";
 import { AutoDedupHeader } from "./AutoDedupHeader";
 import { AutoDedupNotices } from "./AutoDedupNotices";
-import { AutoDedupControls } from "./AutoDedupControls";
 import "./AutoDeduplicateView.css";
 
 export default function AutoDeduplicateView({
@@ -246,8 +245,6 @@ export default function AutoDeduplicateView({
       {phase === "error" && <div className="auto-dedup-error">{errorMessage}</div>}
 
       <DedupResultsTable rows={filteredRows} fieldName={fieldName} dryRun={dryRun} phase={phase} />
-
-      <AutoDedupControls isRunning={isRunning} isPaused={isPaused} dryRun={dryRun} onPause={handlePause} />
 
       <DedupLogPanel
         displayLogs={displayLogs}

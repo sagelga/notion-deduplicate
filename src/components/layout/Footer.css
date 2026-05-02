@@ -36,6 +36,21 @@
   color: var(--color-muted);
 }
 
+.footer-sep {
+  color: var(--color-rim);
+}
+
+.footer-link {
+  color: var(--color-muted);
+  text-decoration: none;
+  transition: color 0.1s;
+}
+
+.footer-link:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
 .footer-controls {
   display: flex;
   align-items: center;

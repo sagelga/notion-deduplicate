@@ -25,21 +25,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { archivePage, deletePage } from "@/lib/notion";
 import { DedupGroupsList } from "./DedupGroupsList";
 import { DedupActionBar } from "./DedupActionBar";
+import type { Page, DuplicateGroup, Mode } from "./dedup-types";
 import "./DeduplicateView.css";
-
-export interface Page {
-  id: string;
-  created_time: string;
-  title: string;
-  properties: Record<string, string | null>;
-}
-
-export interface DuplicateGroup {
-  value: string;
-  pages: Page[];
-}
-
-export type Mode = "archive" | "delete";
 
 const GROUPS_PER_PAGE = 10;
 

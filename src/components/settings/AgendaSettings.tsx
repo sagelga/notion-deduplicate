@@ -19,17 +19,6 @@ import "./AgendaSettings.css";
 
 export default function AgendaSettings() {
   const { token } = useNotionToken();
-
-  if (!token) {
-    return (
-      <div className="agenda-token-notice">
-        <p>
-          A Notion integration token is required to load your databases.{" "}
-          <Link href="/settings#connection">Set up your connection</Link> first.
-        </p>
-      </div>
-    );
-  }
   const {
     selectedDatabaseId,
     databases,
@@ -52,6 +41,17 @@ export default function AgendaSettings() {
     handleDatabaseChange,
     handleMappingChange,
   } = useAgendaSettings();
+
+  if (!token) {
+    return (
+      <div className="agenda-token-notice">
+        <p>
+          A Notion integration token is required to load your databases.{" "}
+          <Link href="/settings#connection">Set up your connection</Link> first.
+        </p>
+      </div>
+    );
+  }
 
   if (!selectedDatabaseId) {
     return (

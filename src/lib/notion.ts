@@ -35,10 +35,15 @@ type NotionDate = { start: string } | null;
 
 // NotionPropertyValue mirrors the subset of Notion property types that this
 // app actually needs to read. Fields for unsupported types are simply absent.
+interface NotionMultiSelectItem {
+  name: string;
+}
+
 interface NotionPropertyValue {
   title?: NotionRichText;
   rich_text?: NotionRichText;
   select?: NotionSelect;
+  multi_select?: NotionMultiSelectItem[];
   number?: number | null;
   email?: string | null;
   url?: string | null;
@@ -400,4 +405,68 @@ export async function archivePage(pageId: string, token: string): Promise<void> 
   if (!response.ok) {
     throw new Error(`Failed to archive page: ${response.status}`);
   }
+}
+
+// ── Marketplace templates ──────────────────────────────────────────────────
+
+export interface MarketplaceTemplate {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  emoji: string;
+  gradient: string;
+  featured: boolean;
+  trending: boolean;
+  href: string;
+  author: string | null;
+  installCount: number;
+  tags: string[];
+}
+
+function getMultiSelectValue(prop: NotionPropertyValue): string[] {
+  if (!prop?.multi_select) return [];
+  return prop.multi_select.map((s) => s.name);
+}
+
+export async function listTemplates(
+  databaseId: string,
+  token: string
+): Promise<MarketplaceTemplate[]> {
+  const pages: MarketplaceTemplate[] = [];
+
+  for await (const batch of paginateDatabase(databaseId, token)) {
+    for (const page of batch) {
+      const props = page.properties;
+      pages.push({
+        id: page.id,
+        name: getPropertyValue(props["Name"] ?? props["Title"], "title") ?? "Untitled",
+        category: getPropertyValue(props["Category"], "select") ?? "General",
+        description: getPropertyValue(props["Description"], "rich_text") ?? "",
+        emoji: getPropertyValue(props["Emoji"], "rich_text") ?? "📄",
+        gradient: getPropertyValue(props["Gradient"], "rich_text") ?? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        featured: props["Featured"]?.checkbox ?? false,
+        trending: props["Trending"]?.checkbox ?? false,
+        href: getPropertyValue(props["NotionTemplateURL"], "url") ?? "#",
+        author: getPropertyValue(props["Author"], "rich_text"),
+        installCount: parseInt(getPropertyValue(props["InstallCount"], "number") ?? "0", 10),
+        tags: getMultiSelectValue(props["Tags"]),
+      });
+    }
+  }
+
+  return pages;
+}
+
+export async function getTemplateInstallCount(
+  pageId: string,
+  token: string
+): Promise<number> {
+  const response = await notionProxyFetch(`/v1/pages/${pageId}`, "GET", token);
+
+  if (!response.ok) return 0;
+
+  const data = (await response.json()) as { properties?: Record<string, NotionPropertyValue> };
+  const prop = data.properties?.["InstallCount"];
+  return parseInt(getPropertyValue(prop ?? {}, "number") ?? "0", 10);
 }

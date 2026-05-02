@@ -5,7 +5,7 @@
 
 import { type ReactNode } from "react";
 import { Table, type TableColumn } from "@/components/table/Table";
-import type { DuplicateGroup } from "./DeduplicateView";
+import type { DuplicateGroup, DedupeTableRow } from "./dedup-types";
 
 interface DedupGroupsListProps {
   visibleGroups: DuplicateGroup[];
@@ -13,15 +13,6 @@ interface DedupGroupsListProps {
   excludedIds: Set<string>;
   onKeepChange: (group: DuplicateGroup, pageId: string) => void;
   onExcludeToggle: (pageId: string, excluded: boolean) => void;
-}
-
-interface DedupeTableRow extends Record<string, unknown> {
-  title: { _pageId: string; _title: string };
-  created_time: string;
-  action: null;
-  _pageId: string;
-  _isKept: boolean;
-  _isExcluded: boolean;
 }
 
 function notionPageUrl(id: string) {

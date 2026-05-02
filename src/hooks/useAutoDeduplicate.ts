@@ -312,7 +312,7 @@ export function useAutoDeduplicate({
       const matchWorker = async () => {
         setActiveStage("match");
         let fetchQueueIdx = 0;
-        let stats = statsFlushRef.current;
+        const stats = statsFlushRef.current;
         try {
           let stageStarted = false;
           while (!fetchDone || fetchQueueIdx < fetchQueue.length) {
@@ -386,6 +386,7 @@ export function useAutoDeduplicate({
                 loserTitle = title;
               }
               deleteQueue.push({ id: taskId, title: taskTitle, fieldValue });
+              emitPage({ id: taskId, title: taskTitle, fieldValue, status: "pending" });
               const thisAge = new Date(created_time).toISOString();
               const existingAge = new Date(existing.created_time).toISOString();
               appendLog(

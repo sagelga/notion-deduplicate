@@ -5,10 +5,21 @@
 
 import { cookies } from "next/headers";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { PageIllustration } from "@/components/ui/PageIllustration";
+import { buildFaqJsonLd } from "@/config/faq-data";
 import "./page.css";
 
 export const runtime = "edge";
+
+export const metadata: Metadata = {
+  title: "Clean Up Duplicate Notion Pages — notion-tools",
+  description:
+    "Select a Notion database, pick a field to group by, and remove all but the newest copy — in seconds. Free duplicate finder for Notion workspaces.",
+  alternates: {
+    canonical: "/",
+  },
+};
 
 const HOW_IT_WORKS = [
   { n: "01", title: "Connect", sub: "OAuth token, httpOnly cookie" },
@@ -26,9 +37,15 @@ const TOOLS = [
 export default async function Home() {
   const cookieStore = await cookies();
   const isConnected = !!cookieStore.get("notion_token")?.value;
+  const jsonLd = buildFaqJsonLd();
 
   return (
-    <div className="landing-wrapper">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div className="landing-wrapper">
       {/* ── Hero (S1) ── */}
       <section className="landing-hero">
         <div className="landing-hero-left">
@@ -80,5 +97,6 @@ export default async function Home() {
         </div>
       </section>
     </div>
+    </>
   );
 }

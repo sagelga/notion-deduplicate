@@ -3,6 +3,8 @@
 
 "use client";
 
+import { useState } from "react";
+import { Sparkles } from "lucide-react";
 import AgendaShell from "@/components/agenda/AgendaShell";
 import CalendarView from "@/components/agenda/CalendarView";
 import QuickAddBar from "@/components/agenda/QuickAddBar";
@@ -10,6 +12,7 @@ import TodayTaskList from "@/components/agenda/TodayTaskList";
 import UpcomingTaskList from "@/components/agenda/UpcomingTaskList";
 import SetupGate from "@/components/dedup/SetupGate";
 import Notification from "@/components/ui/Notification";
+import ResearchHub from "@/components/agenda/research/ResearchHub";
 import { useAgenda } from "@/hooks/AgendaContext";
 import { useAgendaSync } from "@/hooks/useAgendaSync";
 import { useEffect } from "react";
@@ -26,6 +29,7 @@ export default function AgendaContent() {
 function AgendaShellWrapper() {
   const { currentView, notifications, removeNotification, isLoading, defaultView } = useAgenda();
   const { sync } = useAgendaSync();
+  const [researchHubOpen, setResearchHubOpen] = useState(false);
 
   useEffect(() => {
     sync(defaultView);
@@ -43,7 +47,17 @@ function AgendaShellWrapper() {
   return (
     <AgendaShell>
       <div className="agenda-page">
-        <QuickAddBar />
+        <div className="agenda-page__toolbar">
+          <QuickAddBar />
+          <button
+            className="agenda-page__research-btn"
+            onClick={() => setResearchHubOpen(true)}
+            title="Deep Research with 10 AI agents"
+          >
+            <Sparkles size={16} />
+            <span>Deep Research</span>
+          </button>
+        </div>
         {isLoading && (
           <div className="agenda-page__loading">
             <div className="agenda-page__loading-bar" />
@@ -54,6 +68,7 @@ function AgendaShellWrapper() {
       {notifications.map((n) => (
         <Notification key={n.id} variant={n.variant} title={n.title} message={n.message} autoDismissMs={n.autoDismissMs} onDismiss={() => removeNotification(n.id)} />
       ))}
+      <ResearchHub isOpen={researchHubOpen} onClose={() => setResearchHubOpen(false)} />
     </AgendaShell>
   );
 }

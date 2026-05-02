@@ -3,7 +3,7 @@
 
 "use client";
 
-import type { Mode } from "./DeduplicateView";
+import type { Mode } from "./dedup-types";
 
 interface DedupActionBarProps {
   pageIdsToAction: number;

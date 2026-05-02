@@ -1,7 +1,7 @@
 // Footer.tsx
 //
 // Application footer that houses:
-//   - Copyright notice
+//   - Copyright notice + FAQ link
 //   - DedupProgressBottomSheet — the persistent floating dedup progress indicator
 //
 // DedupProgressBottomSheet is rendered here (rather than in the page layout)
@@ -11,6 +11,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import DedupProgressBottomSheet from "@/components/dedup/DedupProgressBottomSheet";
 import "./Footer.css";
 
@@ -25,6 +26,10 @@ export default function Footer({ copyrightStart = 2024 }: FooterProps) {
       <div className="footer-inner">
         <span className="footer-copy">
           © {copyrightStart} notion-tools
+          <span className="footer-sep"> · </span>
+          <Link href="/faq" className="footer-link">
+            FAQ
+          </Link>
         </span>
         <div className="footer-controls" />
       </div>

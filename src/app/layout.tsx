@@ -43,8 +43,62 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "notion-tools",
+  metadataBase: new URL("https://notion.sagelga.com"),
+  title: {
+    default: "notion-tools",
+    template: "%s | notion-tools",
+  },
   description: "A growing collection of tools to help you work smarter in Notion",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    siteName: "notion-tools",
+    title: "notion-tools — Notion Deduplication & Productivity Tools",
+    description:
+      "Clean up duplicate Notion pages, manage your agenda, and get more out of Notion. Free tools for Notion power users.",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "notion-tools — Clean up duplicate Notion pages",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@sagelga",
+    creator: "@sagelga",
+    title: "notion-tools — Notion Deduplication & Productivity Tools",
+    description:
+      "Clean up duplicate Notion pages, manage your agenda, and get more out of Notion. Free tools for Notion power users.",
+    images: ["/opengraph-image.png"],
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+    date: false,
+  },
 };
 
 const NAV_LINKS: NavItem[] = [

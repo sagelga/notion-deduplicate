@@ -1,0 +1,463 @@
+.research-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 0;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.research-hub__intro {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.research-hub__intro-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin-bottom: 16px;
+}
+
+.research-hub__intro h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.research-hub__intro p {
+  color: var(--color-text-secondary, #666);
+  font-size: 14px;
+  max-width: 400px;
+  margin: 0 auto 20px;
+  line-height: 1.5;
+}
+
+.research-hub__personality-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 auto 24px;
+  max-width: 500px;
+  text-align: left;
+}
+
+.research-hub__personality-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-bg-secondary, #f5f5f5);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.personality-emoji {
+  font-size: 16px;
+}
+
+.personality-name {
+  font-weight: 600;
+  color: var(--color-text-primary, #333);
+}
+
+.personality-focus {
+  color: var(--color-text-secondary, #666);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.research-hub__query-input {
+  display: flex;
+  gap: 8px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.research-hub__query-input input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--color-bg-primary, #fff);
+  color: var(--color-text-primary, #333);
+}
+
+.research-hub__query-input input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.research-hub__query-input button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.research-hub__query-input button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.research-hub__query-input button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.research-hub__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.research-hub__progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.research-hub__progress-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.research-hub__progress-count {
+  font-size: 14px;
+  color: var(--color-text-secondary, #666);
+}
+
+.research-hub__progress-count span:first-child {
+  font-weight: 700;
+  color: #667eea;
+}
+
+.research-hub__agents-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .research-hub__agents-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .research-hub__personality-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.research-hub__cancel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 8px;
+  color: var(--color-text-secondary, #666);
+  font-size: 14px;
+  cursor: pointer;
+  margin: 8px auto 0;
+  transition: all 0.2s;
+}
+
+.research-hub__cancel-btn:hover {
+  background: var(--color-bg-secondary, #f5f5f5);
+  color: var(--color-text-primary, #333);
+}
+
+.research-hub__results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.research-hub__results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.research-hub__results-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.research-hub__results-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.research-hub__saved-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-radius: 6px;
+  font-size: 13px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.research-hub__saved-link:hover {
+  background: #c8e6c9;
+}
+
+.research-hub__new-search-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--color-bg-secondary, #f5f5f5);
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--color-text-primary, #333);
+}
+
+.research-hub__new-search-btn:hover {
+  background: var(--color-border, #ddd);
+}
+
+.agent-card {
+  background: var(--color-bg-primary, #fff);
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s;
+}
+
+.agent-card--researching {
+  border-color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%);
+}
+
+.agent-card--complete {
+  border-color: #4caf50;
+}
+
+.agent-card--error {
+  border-color: #f44336;
+}
+
+.agent-card--expanded {
+  grid-column: span 1;
+}
+
+.agent-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agent-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-card__emoji {
+  font-size: 20px;
+}
+
+.agent-card__name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.agent-card__status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #666);
+}
+
+.agent-card__spinner {
+  animation: spin 1s linear infinite;
+  color: #667eea;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.agent-card__check {
+  color: #4caf50;
+}
+
+.agent-card__error {
+  color: #f44336;
+}
+
+.agent-card__thinking {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-card__thinking-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.agent-card__thinking-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #667eea;
+  animation: bounce 1.4s ease-in-out infinite;
+}
+
+.agent-card__thinking-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.agent-card__thinking-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-6px); }
+}
+
+.agent-card__thinking p {
+  font-size: 12px;
+  color: var(--color-text-secondary, #666);
+  font-style: italic;
+  margin: 0;
+}
+
+.agent-card__confidence {
+  display: flex;
+}
+
+.confidence-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.confidence--high {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.confidence--medium {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.confidence--low {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.agent-card__findings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-card__findings-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary, #333);
+  margin: 4px 0 0;
+}
+
+.agent-card__findings-bullet {
+  font-size: 13px;
+  margin-left: 16px;
+  color: var(--color-text-secondary, #666);
+}
+
+.agent-card__findings-paragraph {
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.5;
+  color: var(--color-text-primary, #333);
+}
+
+.agent-card__sources {
+  border-top: 1px solid var(--color-border, #e0e0e0);
+  padding-top: 8px;
+}
+
+.agent-card__sources h5 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #666);
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.agent-card__sources ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.agent-card__sources li {
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.agent-card__sources a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.agent-card__sources a:hover {
+  text-decoration: underline;
+}
+
+.agent-card__summary {
+  font-size: 12px;
+  color: var(--color-text-secondary, #666);
+  line-height: 1.4;
+}
+
+.agent-card__error-msg {
+  text-align: center;
+}
+
+.agent-card__error-msg p {
+  font-size: 13px;
+  color: #f44336;
+  margin: 0 0 4px;
+}
+
+.agent-card__error-msg small {
+  font-size: 11px;
+  color: var(--color-text-secondary, #666);
+}
